@@ -1,0 +1,807 @@
+"use client";
+
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
+import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
+import { api, hasPiSdk, initPi } from "@/lib/pi-client";
+import type { Pioneer, View } from "@/lib/types";
+import GameScreen from "@/games/GameScreen";
+
+type TourRow = {
+  id: string;
+  title: string;
+  gameId: string;
+  entryPi: number;
+  prizeLabel: string;
+  endsAt: number;
+  players: number;
+  board: { uid: string; username: string; best: number }[];
+};
+
+const ICONS: Record<string, string> = {
+  "crown-catch": "♛",
+  "reflex-ring": "◎",
+  "memory-vault": "▣",
+  "orbit-dash": "✧",
+  "stack-king": "▀",
+  "pulse-tap": "♩",
+  "grid-merge": "⊞",
+  "gold-slash": "⚔",
+  "king-tap": "●",
+  "maze-crown": "▦",
+};
+
+export default function AppShell() {
+  const [view, setView] = useState<View>("splash");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const [session, setSession] = useState<string | null>(null);
+  const [pioneer, setPioneer] = useState<Pioneer | null>(null);
+  const [category, setCategory] = useState<(typeof CATEGORIES)[number]["id"]>("all");
+  const [gameId, setGameId] = useState<string | null>(null);
+  const [tournamentId, setTournamentId] = useState<string | null>(null);
+  const [tours, setTours] = useState<TourRow[]>([]);
+  const [board, setBoard] = useState<{ username: string; score: number; gameId: string }[]>([]);
+  const [boardGame, setBoardGame] = useState("all");
+  const [stake, setStake] = useState(0);
+  const [stakePick, setStakePick] = useState<string | null>(null);
+  const [stats, setStats] = useState<Record<string, { plays: number; players: number }>>({});
+
+  const games = useMemo(
+    () => GAMES.filter((g) => category === "all" || g.category === category),
+    [category],
+  );
+
+  const boosted = Boolean(pioneer && pioneer.boostUntil > Date.now());
+
+  const applyPioneer = (next: Pioneer) => {
+    setPioneer(next);
+    try {
+      localStorage.setItem("damie.pioneer", JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  useEffect(() => {
+    initPi().catch(() => undefined);
+  }, []);
+
+  const refreshTours = useCallback(async () => {
+    const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
+    setTours(data.tournaments);
+  }, []);
+
+  const refreshBoard = useCallback(async (id?: string) => {
+    const q = id && id !== "all" ? `?gameId=${id}` : "";
+    const data = await api<{ board: { username: string; score: number; gameId: string }[] }>(
+      `/api/leaderboard${q}`,
+      null,
+    );
+    setBoard(data.board);
+  }, []);
+
+  useEffect(() => {
+    if (view === "lobby") {
+      api<{ games: Record<string, { plays: number; players: number }> }>("/api/stats", null)
+        .then((data) => setStats(data.games))
+        .catch(() => undefined);
+    }
+    if (view === "tournaments") refreshTours().catch(() => undefined);
+    if (view === "rankings") refreshBoard(boardGame).catch(() => undefined);
+  }, [view, boardGame, refreshBoard, refreshTours]);
+
+  async function connect() {
+    setBusy(true);
+    setError("");
+    try {
+      if (!hasPiSdk()) {
+        setError("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
+        return;
+      }
+      await initPi();
+      const pending = { payment: null as PiPaymentDTO | null };
+      const auth = await window.Pi!.authenticate(["username", "payments"], (payment) => {
+        pending.payment = payment;
+      });
+      const data = await api<{ session: string; pioneer: Pioneer }>(
+        "/api/auth/verify",
+        null,
+        { accessToken: auth.accessToken },
+      );
+      setSession(data.session);
+      applyPioneer(data.pioneer);
+      if (pending.payment) {
+        const payment = pending.payment;
+        const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
+          paymentId: payment.identifier,
+          txid: payment.transaction?.txid,
+        });
+        if (done.pioneer) applyPioneer(done.pioneer);
+      }
+      setView("lobby");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Connexion Pi impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function pay(productId: string, amount: number, memo: string) {
+    if (!session || !pioneer) return false;
+    if (!hasPiSdk()) {
+      setError("Les paiements Pi s’effectuent dans le Pi Browser.");
+      return false;
+    }
+    setBusy(true);
+    setError("");
+    try {
+      await initPi();
+      await new Promise<void>((resolve, reject) => {
+        window.Pi!.createPayment(
+          { amount, memo, metadata: { productId, uid: pioneer.uid } },
+          {
+            onReadyForServerApproval: (paymentId) => {
+              api("/api/payments/approve", session, { paymentId, productId }).catch(reject);
+            },
+            onReadyForServerCompletion: (paymentId, txid) => {
+              api<{ pioneer: Pioneer }>("/api/payments/complete", session, { paymentId, txid })
+                .then((res) => {
+                  if (res.pioneer) applyPioneer(res.pioneer);
+                  resolve();
+                })
+                .catch(reject);
+            },
+            onCancel: () => reject(new Error("Paiement annulé")),
+            onError: (err) => reject(err),
+          },
+        );
+      });
+      return true;
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Paiement impossible");
+      return false;
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function watchAd() {
+    if (!session) return;
+    setBusy(true);
+    setError("");
+    try {
+      if (!hasPiSdk() || !window.Pi?.Ads) {
+        setError("Les pubs récompensées s’affichent dans le Pi Browser.");
+        return;
+      }
+      await initPi();
+      const ready = await window.Pi.Ads.isAdReady("rewarded");
+      if (!ready.ready) await window.Pi.Ads.requestAd("rewarded");
+      const shown = await window.Pi.Ads.showAd("rewarded");
+      if (shown.type === "rewarded" && shown.result === "AD_REWARDED") {
+        const data = await api<{ pioneer: Pioneer }>("/api/ads/verify", session, { adId: shown.adId });
+        if (data.pioneer) applyPioneer(data.pioneer);
+      } else {
+        setError("Pub non récompensée. Réessayez dans le Pi Browser.");
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Publicité indisponible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function finishGame(score: number) {
+    if (!session || !gameId) return;
+    try {
+      const data = await api<{ pioneer: Pioneer; score: number; payout?: number; damie?: number }>(
+        "/api/scores",
+        session,
+        { gameId, score, stake },
+      );
+      if (data.pioneer) applyPioneer(data.pioneer);
+      const live = await api<{ games: Record<string, { plays: number; players: number }> }>("/api/stats", null);
+      setStats(live.games);
+      if (tournamentId) {
+        await api("/api/tournaments", session, {
+          action: "score",
+          tournamentId,
+          score: data.score,
+        });
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Score non enregistré");
+    }
+  }
+
+  async function joinTour(t: TourRow) {
+    if (!session) return;
+    setError("");
+    const result = await api<{ ok: boolean; error?: string; pioneer?: Pioneer }>(
+      "/api/tournaments",
+      session,
+      { tournamentId: t.id },
+    );
+    if (!result.ok) {
+      setError(result.error || "Inscription impossible");
+      return;
+    }
+    if (result.pioneer) applyPioneer(result.pioneer);
+    setTournamentId(t.id);
+    setGameId(t.gameId);
+    setView("play");
+  }
+
+  async function startGame(id: string, amount: number) {
+    if (!session) return;
+    setError("");
+    try {
+      if (amount > 0) {
+        const res = await api<{ pioneer?: Pioneer }>("/api/wallet", session, {
+          action: "stake",
+          amount,
+        });
+        if (res.pioneer) applyPioneer(res.pioneer);
+      }
+      setStake(amount);
+      setStakePick(null);
+      setTournamentId(null);
+      setGameId(id);
+      setView("play");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Mise impossible");
+    }
+  }
+
+  async function walletCall(action: string, extra: Record<string, unknown> = {}) {
+    if (!session) return;
+    setBusy(true);
+    setError("");
+    try {
+      const res = await api<{ pioneer?: Pioneer; error?: string }>("/api/wallet", session, { action, ...extra });
+      if (res.pioneer) applyPioneer(res.pioneer);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Opération impossible");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function claim() {
+    if (!session) return;
+    const data = await api<{ pioneer: Pioneer }>("/api/profile", session, { action: "claim" });
+    if (data.pioneer) applyPioneer(data.pioneer);
+  }
+
+  if (view === "splash") {
+    return (
+      <div className="app-root">
+        <div className="phone">
+          <div className="splash">
+            <div className="pill">GAME HUB</div>
+            <img src="/logo.png" alt="Damie GameHub" />
+            <p>
+              10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
+              uniquement avec Pi.
+            </p>
+            {error && <div className="warn">{error}</div>}
+            <button className="gold-btn" disabled={busy} onClick={() => connect()}>
+              {busy ? "Connexion…" : "Entrer avec Pi"}
+            </button>
+            <div className="notice">Auth Pi uniquement · transactions en π uniquement</div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (view === "play" && gameId) {
+    return (
+      <div className="app-root">
+        <div className="phone">
+          <GameScreen
+            gameId={gameId}
+            boosted={boosted}
+            lives={pioneer?.lives ?? 0}
+            stake={stake}
+            onExit={() => {
+              setView("lobby");
+              setGameId(null);
+              setTournamentId(null);
+              setStake(0);
+            }}
+            onFinished={finishGame}
+            onUseLife={async () => {
+              if (!session) return false;
+              try {
+                const data = await api<{ pioneer: Pioneer }>("/api/profile", session, { action: "use-life" });
+                if (data.pioneer) applyPioneer(data.pioneer);
+                return true;
+              } catch (err) {
+                setError(err instanceof Error ? err.message : "Vie indisponible");
+                return false;
+              }
+            }}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-root">
+      <div className="phone">
+        <div className="scroll">
+          {view !== "privacy" && (
+            <div className="topbar">
+              <div className="brand-mini">
+                <img src="/logo.png" alt="" />
+                <div>
+                  <strong>DAMIE</strong>
+                  <span>GAME HUB</span>
+                </div>
+              </div>
+              <div className="pill" onClick={() => setView("wallet")} style={{ cursor: "pointer" }}>
+                {Number(pioneer?.piCredit || 0).toFixed(2)} π · {pioneer?.damie ?? 0} {TOKEN}
+              </div>
+            </div>
+          )}
+
+          {error && <div className="warn">{error}</div>}
+
+          {view === "lobby" && pioneer && (
+            <>
+              <div className="hero">
+                <div className="pill">Saison Couronne</div>
+                <h2>Jouez. Grimpez. Régnez.</h2>
+                <p>Déposez des π, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en π pour retirer.</p>
+                <button className="gold-btn" onClick={() => setStakePick("crown-catch")}>
+                  Jouer maintenant
+                </button>
+                <img className="mark" src="/logo.png" alt="" />
+              </div>
+
+              <div className="section-title">
+                <h3>Missions du jour</h3>
+                <span>Série {pioneer.streak}j</span>
+              </div>
+              <div className="missions">
+                <div className={`mission ${pioneer.missions.play3 >= 3 ? "on" : ""}`}>
+                  Jouer 3 parties <b>{pioneer.missions.play3}/3</b>
+                </div>
+                <div className={`mission ${pioneer.missions.score500 ? "on" : ""}`}>
+                  Atteindre 500 pts <b>{pioneer.missions.score500 ? "OK" : "—"}</b>
+                </div>
+                <div className={`mission ${pioneer.missions.ad1 ? "on" : ""}`}>
+                  Pub récompensée <b>{pioneer.missions.ad1 ? "OK" : "—"}</b>
+                </div>
+                <div className={`mission ${pioneer.missions.tournament1 ? "on" : ""}`}>
+                  Rejoindre un tournoi <b>{pioneer.missions.tournament1 ? "OK" : "—"}</b>
+                </div>
+                <button className="gold-btn" onClick={claim} disabled={pioneer.missions.claimed}>
+                  {pioneer.missions.claimed ? "Récompense déjà prise" : "Réclamer le coffre du jour"}
+                </button>
+              </div>
+
+              <div className="row">
+                {CATEGORIES.map((c) => (
+                  <button key={c.id} className={`chip ${category === c.id ? "on" : ""}`} onClick={() => setCategory(c.id)}>
+                    {c.label}
+                  </button>
+                ))}
+              </div>
+              <div className="grid">
+                {games.map((g) => (
+                  <button
+                    key={g.id}
+                    className="card"
+                    onClick={() => setStakePick(g.id)}
+                  >
+                    <div className="thumb" style={{ background: `linear-gradient(180deg, ${g.accent}55, #101010)` }}>
+                      <span>{ICONS[g.id]}</span>
+                    </div>
+                    <div className="card-body">
+                      <b>{g.title}</b>
+                      <small>{g.tagline}</small>
+                      <div className="play-btn">
+                        JOUER
+                        {stats[g.id]
+                          ? ` · ${stats[g.id].players} joueur${stats[g.id].players > 1 ? "s" : ""} · ${stats[g.id].plays} partie${stats[g.id].plays > 1 ? "s" : ""}`
+                          : " · nouveau"}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
+
+          {view === "tournaments" && (
+            <>
+              <div className="section-title">
+                <h3>Tournoi Center</h3>
+                <span>{pioneer?.tickets ?? 0} tickets</span>
+              </div>
+              <div className="list">
+                {tours.map((t) => {
+                  const def = TOURNAMENTS.find((x) => x.id === t.id);
+                  const game = gameById(t.gameId);
+                  const remain = Math.max(0, t.endsAt - Date.now());
+                  const hrs = Math.floor(remain / 3600000);
+                  return (
+                    <div key={t.id} className="shop-item">
+                      <h4>{t.title}</h4>
+                      <p>
+                        {game?.title} · {t.players} joueurs · {hrs}h restantes
+                        <br />
+                        Récompense : {def?.prizeLabel}
+                      </p>
+                      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <span className="price">{t.entryPi === 0 ? "Gratuit" : `${piToDgh(t.entryPi)} ${TOKEN}`}</span>
+                        <button className="gold-btn" disabled={busy} onClick={() => joinTour(t)}>
+                          Entrer
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          )}
+
+          {view === "rankings" && (
+            <>
+              <div className="row">
+                <button className={`chip ${boardGame === "all" ? "on" : ""}`} onClick={() => setBoardGame("all")}>
+                  Global
+                </button>
+                {GAMES.map((g) => (
+                  <button key={g.id} className={`chip ${boardGame === g.id ? "on" : ""}`} onClick={() => setBoardGame(g.id)}>
+                    {g.title}
+                  </button>
+                ))}
+              </div>
+              <div className="list">
+                {board.length === 0 && <p className="notice">Aucun score encore. Soyez le premier trône.</p>}
+                {board.map((row, i) => (
+                  <div key={`${row.username}-${i}`} className="list-item">
+                    <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                      <span className="rank">{i + 1}</span>
+                      <div>
+                        <b>{row.username}</b>
+                        <div className="notice" style={{ margin: 0 }}>
+                          {gameById(row.gameId)?.title || "Global"}
+                        </div>
+                      </div>
+                    </div>
+                    <span className="price">{row.score}</span>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
+
+          {view === "wallet" && pioneer && (
+            <>
+              <div className="section-title">
+                <h3>Portefeuille</h3>
+                <span>100 {TOKEN} = 1 π</span>
+              </div>
+              <div className="stats">
+                <div className="stat">
+                  <b>{Number(pioneer.piCredit || 0).toFixed(2)}</b>
+                  <span>π à échanger</span>
+                </div>
+                <div className="stat">
+                  <b>{pioneer.damie || 0}</b>
+                  <span>{TOKEN} jouables</span>
+                </div>
+                <div className="stat">
+                  <b>{pioneer.crownScore}</b>
+                  <span>Couronnes</span>
+                </div>
+              </div>
+              <div className="shop-item" style={{ marginBottom: 12 }}>
+                <h4>Déposer des π</h4>
+                <p>
+                  Les π arrivent sur votre solde π. Ils ne sont pas utilisables en jeu tant que vous
+                  ne les échangez pas en {TOKEN}.
+                </p>
+                <div className="row" style={{ flexWrap: "wrap" }}>
+                  {DEPOSITS.map((amount) => (
+                    <button
+                      key={amount}
+                      className="gold-btn"
+                      disabled={busy}
+                      onClick={() => pay(`deposit:${amount}`, amount, `Dépôt ${amount} π Damie GameHub`)}
+                    >
+                      +{amount} π
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="shop-item" style={{ marginBottom: 12 }}>
+                <h4>Échanger π → {TOKEN}</h4>
+                <p>
+                  Seuls les {TOKEN} servent aux mises, à la boutique et aux tournois. Minimum{" "}
+                  {MIN_SWAP_PI} π.
+                </p>
+                <div className="row" style={{ flexWrap: "wrap" }}>
+                  {DEPOSITS.filter((amount) => (pioneer.piCredit || 0) >= amount).map((amount) => (
+                    <button
+                      key={amount}
+                      className="gold-btn"
+                      disabled={busy}
+                      onClick={() => walletCall("swap-in", { amount })}
+                    >
+                      {amount} π → {piToDgh(amount)} {TOKEN}
+                    </button>
+                  ))}
+                  <button
+                    className="ghost-btn"
+                    disabled={busy || (pioneer.piCredit || 0) < MIN_SWAP_PI}
+                    onClick={() => walletCall("swap-in", { amount: pioneer.piCredit })}
+                  >
+                    Tout échanger ({Number(pioneer.piCredit || 0).toFixed(2)} π)
+                  </button>
+                </div>
+              </div>
+              <div className="shop-item" style={{ marginBottom: 12 }}>
+                <h4>Échanger {TOKEN} → π</h4>
+                <p>
+                  Pour retirer vos gains, reconvertissez d’abord vos {TOKEN} en π (min. {MIN_CONVERT}{" "}
+                  {TOKEN}).
+                </p>
+                <button
+                  className="gold-btn"
+                  disabled={busy || (pioneer.damie || 0) < MIN_CONVERT}
+                  onClick={() =>
+                    walletCall("convert", {
+                      amount: Math.floor((pioneer.damie || 0) / MIN_CONVERT) * MIN_CONVERT,
+                    })
+                  }
+                >
+                  Échanger {Math.floor((pioneer.damie || 0) / MIN_CONVERT) * MIN_CONVERT} {TOKEN}
+                </button>
+              </div>
+              <div className="shop-item" style={{ marginBottom: 12 }}>
+                <h4>Retirer vers le wallet Pi</h4>
+                <p>Uniquement le solde π. Minimum {MIN_WITHDRAW} π. Envoi vers votre wallet Pioneer.</p>
+                <button
+                  className="ghost-btn"
+                  disabled={busy || (pioneer.piCredit || 0) < MIN_WITHDRAW}
+                  onClick={() => walletCall("withdraw", { amount: pioneer.piCredit })}
+                >
+                  Retirer {Number(pioneer.piCredit || 0).toFixed(2)} π
+                </button>
+              </div>
+              <div className="section-title">
+                <h3>Boutique</h3>
+                <span>Payée en {TOKEN}</span>
+              </div>
+              <div className="list">
+                {SHOP.map((item) => (
+                  <div key={item.id} className="shop-item">
+                    <h4>{item.name}</h4>
+                    <p>{item.detail}</p>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                      <span className="price">{piToDgh(item.amount)} {TOKEN}</span>
+                      <button
+                        className="gold-btn"
+                        disabled={busy || (pioneer.damie || 0) < piToDgh(item.amount)}
+                        onClick={() => walletCall("buy", { productId: item.id })}
+                      >
+                        Acheter
+                      </button>
+                    </div>
+                  </div>
+                ))}
+                <div className="shop-item">
+                  <h4>Vie bonus (pub)</h4>
+                  <p>Regardez une pub récompensée Pi Ads Network.</p>
+                  <button className="ghost-btn" disabled={busy} onClick={watchAd}>
+                    Gagner 1 vie + {TOKEN}
+                  </button>
+                </div>
+              </div>
+              {(pioneer.ledger || []).length > 0 && (
+                <>
+                  <div className="section-title">
+                    <h3>Historique</h3>
+                  </div>
+                  <div className="list">
+                    {pioneer.ledger.slice(0, 12).map((row, i) => (
+                      <div key={`${row.at}-${i}`} className="list-item">
+                        <span>{row.memo}</span>
+                        <b>{row.amount > 0 ? "+" : ""}{row.amount}</b>
+                      </div>
+                    ))}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {view === "profile" && pioneer && (
+            <>
+              <div className="profile-head">
+                <div className="avatar">
+                  <img src="/logo.png" alt="" />
+                </div>
+                <h3 style={{ margin: "0 0 4px" }}>{pioneer.username}</h3>
+                <span className="notice">Pioneer Damie · authentifié Pi</span>
+              </div>
+              <div className="stats">
+                <div className="stat">
+                  <b>{pioneer.crownScore}</b>
+                  <span>Couronnes</span>
+                </div>
+                <div className="stat">
+                  <b>{pioneer.gamesPlayed}</b>
+                  <span>Parties</span>
+                </div>
+                <div className="stat">
+                  <b>{pioneer.streak}</b>
+                  <span>Série</span>
+                </div>
+              </div>
+              <div className="list">
+                <div className="list-item">
+                  <span>π à échanger / retirer</span>
+                  <b>{Number(pioneer.piCredit || 0).toFixed(2)}</b>
+                </div>
+                <div className="list-item">
+                  <span>{TOKEN} jouables</span>
+                  <b>{pioneer.damie || 0}</b>
+                </div>
+                <div className="list-item">
+                  <span>Pièces</span>
+                  <b>{pioneer.coins}</b>
+                </div>
+                <div className="list-item">
+                  <span>Tickets</span>
+                  <b>{pioneer.tickets}</b>
+                </div>
+                <div className="list-item">
+                  <span>Vies</span>
+                  <b>{pioneer.lives}</b>
+                </div>
+                <div className="list-item">
+                  <span>Pubs vues</span>
+                  <b>{pioneer.adsWatched}</b>
+                </div>
+              </div>
+              <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
+                {hasPiSdk() && window.Pi?.openShareDialog && (
+                  <button
+                    className="gold-btn"
+                    onClick={() =>
+                      window.Pi?.openShareDialog?.(
+                        "Damie GameHub",
+                        `Je joue sur Damie GameHub — score ${pioneer.crownScore} couronnes.`,
+                      )
+                    }
+                  >
+                    Partager dans Pi
+                  </button>
+                )}
+                <button className="ghost-btn" onClick={() => setView("privacy")}>
+                  Confidentialité
+                </button>
+              </div>
+            </>
+          )}
+
+          {view === "privacy" && (
+            <div className="legal">
+              <button className="ghost-btn" onClick={() => setView("profile")}>
+                Retour
+              </button>
+              <h3>Confidentialité & règles</h3>
+              <p>
+                Connexion uniquement via le SDK Pi. Aucun e-mail, téléphone, ou compte tiers.
+              </p>
+              <p>
+                Données conservées : identifiant d’app Pi, nom Pioneer, scores, tickets et couronnes
+                nécessaires au jeu, aux tournois et aux classements.
+              </p>
+              <p>
+                Les π déposés doivent être échangés en {TOKEN} pour jouer, miser ou acheter.
+                Pour retirer, les {TOKEN} sont reconvertis en π (100 {TOKEN} = 1 π), puis envoyés vers le
+                wallet Pi. Pas de monnaie fiat.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {view !== "privacy" && (
+          <nav className="nav">
+            <NavBtn label="Lobby" on={view === "lobby"} icon="grid" onClick={() => setView("lobby")} />
+            <NavBtn label="Coupes" on={view === "tournaments"} icon="cup" onClick={() => setView("tournaments")} />
+            <NavBtn label="Top" on={view === "rankings"} icon="rank" onClick={() => setView("rankings")} />
+            <NavBtn label="Solde" on={view === "wallet"} icon="bag" onClick={() => setView("wallet")} />
+            <NavBtn label="Profil" on={view === "profile"} icon="user" onClick={() => setView("profile")} />
+          </nav>
+        )}
+        {stakePick && pioneer && (
+          <div className="overlay">
+            <div className="panel">
+              <h3>Miser pour jouer</h3>
+              <p>
+                Mises et gains en {TOKEN}. Score 150 = 50% · 300 = mise rendue · 600 = x1.5 · 1000 = x2.
+                Sinon la mise est perdue. Échangez d’abord vos π en {TOKEN}.
+              </p>
+              <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
+                {STAKES.map((amount) => (
+                  <button
+                    key={amount}
+                    className="gold-btn"
+                    disabled={amount > 0 && (pioneer.damie || 0) < amount}
+                    onClick={() => startGame(stakePick, amount)}
+                  >
+                    {amount === 0 ? "Jouer sans mise" : `Miser ${amount} ${TOKEN}`}
+                  </button>
+                ))}
+                <button className="ghost-btn" onClick={() => setStakePick(null)}>
+                  Annuler
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function NavBtn({
+  label,
+  on,
+  icon,
+  onClick,
+}: {
+  label: string;
+  on: boolean;
+  icon: "grid" | "cup" | "rank" | "bag" | "user";
+  onClick: () => void;
+}) {
+  return (
+    <button className={on ? "on" : ""} onClick={onClick}>
+      {icon === "grid" && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <rect x="3" y="3" width="8" height="8" rx="2" />
+          <rect x="13" y="3" width="8" height="8" rx="2" />
+          <rect x="3" y="13" width="8" height="8" rx="2" />
+          <rect x="13" y="13" width="8" height="8" rx="2" />
+        </svg>
+      )}
+      {icon === "cup" && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M8 5h8v4a4 4 0 0 1-8 0V5Z" />
+          <path d="M16 6h2.5a2.5 2.5 0 0 1 0 5H16" />
+          <path d="M8 6H5.5a2.5 2.5 0 0 0 0 5H8" />
+          <path d="M12 13v3M9 20h6" />
+        </svg>
+      )}
+      {icon === "rank" && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M4 20V10M12 20V4M20 20v-7" />
+        </svg>
+      )}
+      {icon === "bag" && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <path d="M6 8h12l-1 12H7L6 8Z" />
+          <path d="M9 8V7a3 3 0 0 1 6 0v1" />
+        </svg>
+      )}
+      {icon === "user" && (
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+          <circle cx="12" cy="8" r="3.2" />
+          <path d="M5 20c1.5-3.5 4-5 7-5s5.5 1.5 7 5" />
+        </svg>
+      )}
+      {label}
+    </button>
+  );
+}

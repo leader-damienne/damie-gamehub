@@ -1,0 +1,10 @@
+node_modules
+.next
+out
+.env
+.env.local
+.env.production
+data/store.json
+*.log
+.DS_Store
+.npm-cache
