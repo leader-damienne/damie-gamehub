@@ -6,12 +6,24 @@ export function hasPiSdk() {
   return typeof window !== "undefined" && Boolean(window.Pi);
 }
 
+export async function waitForPiSdk(ms = 5000) {
+  const start = Date.now();
+  while (Date.now() - start < ms) {
+    if (hasPiSdk()) return true;
+    await new Promise((resolve) => setTimeout(resolve, 80));
+  }
+  return hasPiSdk();
+}
+
 let initPromise: Promise<void> | null = null;
 
 export function initPi() {
   if (!hasPiSdk()) return Promise.reject(new Error("Pi SDK absent"));
   if (!initPromise) {
-    initPromise = window.Pi!.init({ version: "2.0", sandbox: PI_SANDBOX });
+    initPromise = window.Pi!.init({ version: "2.0", sandbox: PI_SANDBOX }).catch((err) => {
+      initPromise = null;
+      throw err;
+    });
   }
   return initPromise;
 }

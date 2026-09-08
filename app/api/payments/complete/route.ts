@@ -4,6 +4,8 @@ import { grantProduct, takePayment } from "@/lib/store";
 import { completePayment, getPayment, hasApiKey } from "@/lib/pi-server";
 import { requirePiReady } from "@/lib/pi-flags";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const session = readSession(bearer(req));
   if (!session) return NextResponse.json({ error: "Session invalide" }, { status: 401 });

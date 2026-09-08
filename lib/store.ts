@@ -17,9 +17,16 @@ function todayKey() {
 }
 
 function storePath() {
-  const dir = process.env.VERCEL ? "/tmp" : path.join(process.cwd(), "data");
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
-  return path.join(dir, "store.json");
+  try {
+    const dir =
+      process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE
+        ? "/tmp"
+        : path.join(process.cwd(), "data");
+    if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true });
+    return path.join(dir, "store.json");
+  } catch {
+    return "";
+  }
 }
 
 function freshTournaments(): Record<string, TournamentState> {
@@ -43,10 +50,15 @@ let memory: StoreShape | null = null;
 
 function load(): StoreShape {
   if (memory) return rotateTournaments(memory);
-  try {
-    const raw = fs.readFileSync(storePath(), "utf8");
-    memory = JSON.parse(raw) as StoreShape;
-  } catch {
+  const file = storePath();
+  if (file) {
+    try {
+      const raw = fs.readFileSync(file, "utf8");
+      memory = JSON.parse(raw) as StoreShape;
+    } catch {
+      memory = defaultStore();
+    }
+  } else {
     memory = defaultStore();
   }
   return rotateTournaments(memory);
@@ -54,10 +66,12 @@ function load(): StoreShape {
 
 function save(data: StoreShape) {
   memory = data;
+  const file = storePath();
+  if (!file) return;
   try {
-    fs.writeFileSync(storePath(), JSON.stringify(data));
+    fs.writeFileSync(file, JSON.stringify(data));
   } catch {
-    /* serverless hosts may be read-only besides /tmp */
+    /* Cloudflare / serverless may block disk writes */
   }
 }
 

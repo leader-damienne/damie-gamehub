@@ -3,6 +3,8 @@ import { signSession } from "@/lib/session";
 import { upsertPioneer } from "@/lib/store";
 import { verifyAccessToken } from "@/lib/pi-server";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const body = (await req.json()) as { accessToken?: string };
   if (!body.accessToken) {

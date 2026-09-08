@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
-import { api, hasPiSdk, initPi } from "@/lib/pi-client";
+import { api, hasPiSdk, initPi, waitForPiSdk } from "@/lib/pi-client";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
 
@@ -53,19 +53,96 @@ export default function AppShell() {
   );
 
   const boosted = Boolean(pioneer && pioneer.boostUntil > Date.now());
+  const connecting = useRef(false);
 
-  const applyPioneer = (next: Pioneer) => {
+  const applyPioneer = useCallback((next: Pioneer) => {
     setPioneer(next);
     try {
       localStorage.setItem("damie.pioneer", JSON.stringify(next));
     } catch {
       /* ignore */
     }
-  };
+  }, []);
+
+  const applySession = useCallback((token: string) => {
+    setSession(token);
+    try {
+      localStorage.setItem("damie.session", token);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const runPiAuth = useCallback(async () => {
+    if (!hasPiSdk()) {
+      throw new Error("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
+    }
+    await initPi();
+    const pending = { payment: null as PiPaymentDTO | null };
+    const auth = await window.Pi!.authenticate(["username", "payments"], (payment) => {
+      pending.payment = payment;
+    });
+    const data = await api<{ session: string; pioneer: Pioneer }>(
+      "/api/auth/verify",
+      null,
+      { accessToken: auth.accessToken },
+    );
+    applySession(data.session);
+    applyPioneer(data.pioneer);
+    if (pending.payment) {
+      const payment = pending.payment;
+      const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
+        paymentId: payment.identifier,
+        txid: payment.transaction?.txid,
+      });
+      if (done.pioneer) applyPioneer(done.pioneer);
+    }
+    setView("lobby");
+  }, [applyPioneer, applySession]);
 
   useEffect(() => {
-    initPi().catch(() => undefined);
-  }, []);
+    let cancelled = false;
+    (async () => {
+      setBusy(true);
+      try {
+        const savedSession = localStorage.getItem("damie.session");
+        const savedPioneer = localStorage.getItem("damie.pioneer");
+        if (savedSession && savedPioneer) {
+          try {
+            setSession(savedSession);
+            setPioneer(JSON.parse(savedPioneer) as Pioneer);
+            const data = await api<{ pioneer: Pioneer | null }>("/api/profile", savedSession);
+            if (cancelled) return;
+            if (data.pioneer) applyPioneer(data.pioneer);
+            setView("lobby");
+          } catch {
+            localStorage.removeItem("damie.session");
+          }
+        }
+        const ready = await waitForPiSdk();
+        if (cancelled) return;
+        if (ready) {
+          if (!connecting.current) {
+            connecting.current = true;
+            try {
+              await runPiAuth();
+            } finally {
+              connecting.current = false;
+            }
+          }
+        } else if (!localStorage.getItem("damie.session")) {
+          setError("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
+        }
+      } catch (err) {
+        if (!cancelled) setError(err instanceof Error ? err.message : "Connexion Pi impossible");
+      } finally {
+        if (!cancelled) setBusy(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [applyPioneer, runPiAuth]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -92,37 +169,16 @@ export default function AppShell() {
   }, [view, boardGame, refreshBoard, refreshTours]);
 
   async function connect() {
+    if (connecting.current) return;
+    connecting.current = true;
     setBusy(true);
     setError("");
     try {
-      if (!hasPiSdk()) {
-        setError("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
-        return;
-      }
-      await initPi();
-      const pending = { payment: null as PiPaymentDTO | null };
-      const auth = await window.Pi!.authenticate(["username", "payments"], (payment) => {
-        pending.payment = payment;
-      });
-      const data = await api<{ session: string; pioneer: Pioneer }>(
-        "/api/auth/verify",
-        null,
-        { accessToken: auth.accessToken },
-      );
-      setSession(data.session);
-      applyPioneer(data.pioneer);
-      if (pending.payment) {
-        const payment = pending.payment;
-        const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
-          paymentId: payment.identifier,
-          txid: payment.transaction?.txid,
-        });
-        if (done.pioneer) applyPioneer(done.pioneer);
-      }
-      setView("lobby");
+      await runPiAuth();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Connexion Pi impossible");
     } finally {
+      connecting.current = false;
       setBusy(false);
     }
   }
@@ -141,16 +197,21 @@ export default function AppShell() {
         window.Pi!.createPayment(
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
           {
-            onReadyForServerApproval: (paymentId) => {
-              api("/api/payments/approve", session, { paymentId, productId }).catch(reject);
+            onReadyForServerApproval: async (paymentId) => {
+              try {
+                await api("/api/payments/approve", session, { paymentId, productId });
+              } catch (err) {
+                reject(err instanceof Error ? err : new Error("Approbation Pi impossible"));
+              }
             },
-            onReadyForServerCompletion: (paymentId, txid) => {
-              api<{ pioneer: Pioneer }>("/api/payments/complete", session, { paymentId, txid })
-                .then((res) => {
-                  if (res.pioneer) applyPioneer(res.pioneer);
-                  resolve();
-                })
-                .catch(reject);
+            onReadyForServerCompletion: async (paymentId, txid) => {
+              try {
+                const res = await api<{ pioneer: Pioneer }>("/api/payments/complete", session, { paymentId, txid });
+                if (res.pioneer) applyPioneer(res.pioneer);
+                resolve();
+              } catch (err) {
+                reject(err instanceof Error ? err : new Error("Paiement incomplet"));
+              }
             },
             onCancel: () => reject(new Error("Paiement annulé")),
             onError: (err) => reject(err),
@@ -280,16 +341,18 @@ export default function AppShell() {
         <div className="phone">
           <div className="splash">
             <div className="pill">GAME HUB</div>
-            <img src="/logo.png" alt="Damie GameHub" />
+            <img src="/logo-1024.png" alt="Damie GameHub" />
             <p>
               10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
               uniquement avec Pi.
             </p>
             {error && <div className="warn">{error}</div>}
             <button className="gold-btn" disabled={busy} onClick={() => connect()}>
-              {busy ? "Connexion…" : "Entrer avec Pi"}
+              {busy ? "Connexion Pi…" : "Entrer avec Pi"}
             </button>
-            <div className="notice">Auth Pi uniquement · transactions en π uniquement</div>
+            <div className="notice">
+              {busy ? "Connexion automatique avec Pi…" : "Auth Pi uniquement · transactions en π uniquement"}
+            </div>
           </div>
         </div>
       </div>

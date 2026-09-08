@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { bearer, readSession } from "@/lib/session";
 import { getPioneer, recordScore } from "@/lib/store";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: Request) {
   const session = readSession(bearer(req));
   if (!session) return NextResponse.json({ error: "Session invalide" }, { status: 401 });

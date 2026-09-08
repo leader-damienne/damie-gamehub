@@ -3,6 +3,8 @@ import { bearer, readSession } from "@/lib/session";
 import { grantProduct, rememberPayment, takePayment } from "@/lib/store";
 import { completePayment, getPayment, hasApiKey } from "@/lib/pi-server";
 
+export const dynamic = "force-dynamic";
+
 export async function POST(req: Request) {
   const session = readSession(bearer(req));
   if (!session) return NextResponse.json({ error: "Session invalide" }, { status: 401 });

@@ -16,7 +16,13 @@ export const metadata: Metadata = {
     "Hub de jeux HTML5 pour Pioneers : lobby, tournois, classements et paiements en Pi.",
   applicationName: "Damie GameHub",
   manifest: "/manifest.json",
-  icons: { icon: "/logo.png", apple: "/logo.png" },
+  icons: {
+    icon: [
+      { url: "/logo.png", sizes: "512x512", type: "image/png" },
+      { url: "/logo-1024.png", sizes: "1024x1024", type: "image/png" },
+    ],
+    apple: { url: "/logo-1024.png", sizes: "1024x1024", type: "image/png" },
+  },
 };
 
 export const viewport: Viewport = {
@@ -31,6 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="fr">
       <head>
+        <link rel="apple-touch-icon" href="/logo-1024.png" />
         <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
       </head>
       <body className={outfit.className}>{children}</body>
