@@ -28,69 +28,57 @@ export function piLoginHtml() {
   </div>
   <script>
     (function () {
-      try {
-        JSON.parse(localStorage.getItem("damie.pioneer") || "null");
-      } catch (e) {
-        localStorage.removeItem("damie.session");
-        localStorage.removeItem("damie.pioneer");
-      }
-
       var sandbox = location.hostname !== "damiegamehub.com" && location.hostname !== "www.damiegamehub.com";
       var btn = document.getElementById("pi-enter");
-      var err = document.getElementById("pi-error");
+      var errBox = document.getElementById("pi-error");
       var hint = document.getElementById("pi-hint");
-      var initDone = null;
+      var inited = false;
 
       function showError(text) {
-        err.textContent = text || "";
-        err.style.display = text ? "block" : "none";
+        errBox.textContent = text || "";
+        errBox.style.display = text ? "block" : "none";
       }
 
-      function setBusy(busy) {
-        btn.disabled = false;
-        btn.textContent = busy ? "Autorisez dans Pi…" : "Entrer avec Pi";
-        hint.textContent = busy
-          ? "Touchez Autoriser. Le lobby s'ouvre ensuite tout seul."
-          : "Touchez Entrer avec Pi, puis Autoriser.";
+      function withTimeout(promise, ms, message) {
+        return new Promise(function (resolve, reject) {
+          var t = setTimeout(function () { reject(new Error(message)); }, ms);
+          promise.then(
+            function (v) { clearTimeout(t); resolve(v); },
+            function (e) { clearTimeout(t); reject(e); }
+          );
+        });
       }
 
-      function startInit() {
-        if (!window.Pi) return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
-        if (!initDone) {
-          initDone = window.Pi.init({ version: "2.0", sandbox: sandbox }).catch(function () {
-            initDone = null;
-          });
-        }
-        return initDone || Promise.resolve();
-      }
-
-      if (window.Pi) startInit();
-      else {
-        var tries = 0;
-        var timer = setInterval(function () {
-          tries += 1;
-          if (window.Pi) {
-            clearInterval(timer);
-            startInit();
-          } else if (tries > 50) {
-            clearInterval(timer);
-          }
-        }, 100);
-      }
-
-      window.__piLogin = function () {
-        showError("");
-        setBusy(true);
+      function initPi() {
         if (!window.Pi) {
-          setBusy(false);
+          return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+        }
+        if (inited) return Promise.resolve();
+        return withTimeout(
+          window.Pi.init({ version: "2.0", sandbox: sandbox }),
+          6000,
+          "Pi.init bloque. Dans Develop, l'URL Testnet doit etre exactement " + location.origin
+        ).then(function () {
+          inited = true;
+        });
+      }
+
+      window.Pi && initPi().catch(function () {});
+
+      btn.onclick = function () {
+        showError("");
+        btn.textContent = "Autorisez dans Pi…";
+        hint.textContent = "Touchez Autoriser.";
+        if (!window.Pi) {
+          btn.textContent = "Entrer avec Pi";
           showError("Ouvrez cette page dans le Pi Browser, pas Chrome.");
           return;
         }
-        startInit()
-          .then(function () {
-            return window.Pi.authenticate(["username", "payments"], function () {});
-          })
-          .then(function (auth) {
+        function doAuth() {
+          return window.Pi.authenticate(["username", "payments"], function () {});
+        }
+        var run = inited ? doAuth() : initPi().then(doAuth);
+        run.then(function (auth) {
             if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
             return fetch("/api/auth/verify", {
               method: "POST",
@@ -111,24 +99,11 @@ export function piLoginHtml() {
             location.replace("/hub");
           })
           .catch(function (e) {
-            setBusy(false);
-            showError((e && e.message ? e.message : String(e)) + "\\nURL Develop : " + location.origin);
+            btn.textContent = "Entrer avec Pi";
+            hint.textContent = "Touchez Entrer avec Pi, puis Autoriser.";
+            showError((e && e.message ? e.message : String(e)) + "\\n" + location.origin);
           });
       };
-
-      btn.onclick = window.__piLogin;
-
-      var session = localStorage.getItem("damie.session");
-      var pioneer = localStorage.getItem("damie.pioneer");
-      if (session && pioneer) {
-        try {
-          JSON.parse(pioneer);
-          location.replace("/hub");
-        } catch (e) {
-          localStorage.removeItem("damie.session");
-          localStorage.removeItem("damie.pioneer");
-        }
-      }
     })();
   </script>
 </body>
