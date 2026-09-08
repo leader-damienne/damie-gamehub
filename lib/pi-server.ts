@@ -5,10 +5,20 @@ function apiKey() {
 }
 
 export async function verifyAccessToken(accessToken: string) {
-  const res = await fetch(`${API}/me`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-    cache: "no-store",
-  });
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), 8000);
+  let res: Response;
+  try {
+    res = await fetch(`${API}/me`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      cache: "no-store",
+      signal: ctrl.signal,
+    });
+  } catch {
+    throw new Error("Pi API trop lente. Réessayez.");
+  } finally {
+    clearTimeout(timer);
+  }
   if (!res.ok) {
     throw new Error(`Jeton Pi invalide (${res.status})`);
   }

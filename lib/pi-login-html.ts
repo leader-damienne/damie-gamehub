@@ -56,11 +56,9 @@ export function piLoginHtml() {
         if (inited) return Promise.resolve();
         return withTimeout(
           window.Pi.init({ version: "2.0", sandbox: sandbox }),
-          6000,
-          "Pi.init bloque. Dans Develop, l'URL Testnet doit etre exactement " + location.origin
-        ).then(function () {
-          inited = true;
-        });
+          4000,
+          "Pi.init bloque. URL Develop = " + location.origin
+        ).then(function () { inited = true; });
       }
 
       window.Pi && initPi().catch(function () {});
@@ -74,31 +72,23 @@ export function piLoginHtml() {
           showError("Ouvrez cette page dans le Pi Browser, pas Chrome.");
           return;
         }
+        var done = false;
+        setTimeout(function () {
+          if (!done) showError("Pas de fenetre Pi ? Dans Develop, l'URL Testnet doit etre exactement " + location.origin);
+        }, 5000);
         function doAuth() {
-          return window.Pi.authenticate(["username", "payments"], function () {});
+          return window.Pi.authenticate(["username"], function () {});
         }
         var run = inited ? doAuth() : initPi().then(doAuth);
-        run.then(function (auth) {
+        withTimeout(run, 20000, "Pi n'a pas repondu. Retouchez Entrer avec Pi.")
+          .then(function (auth) {
+            done = true;
             if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
-            return fetch("/api/auth/verify", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ accessToken: auth.accessToken })
-            }).then(function (res) {
-              return res.text().then(function (raw) {
-                var data = {};
-                try { data = JSON.parse(raw); } catch (e) {}
-                if (!res.ok) throw new Error(data.error || ("Erreur serveur " + res.status));
-                return data;
-              });
-            });
-          })
-          .then(function (data) {
-            localStorage.setItem("damie.session", data.session);
-            localStorage.setItem("damie.pioneer", JSON.stringify(data.pioneer));
+            sessionStorage.setItem("damie.piToken", auth.accessToken);
             location.replace("/hub");
           })
           .catch(function (e) {
+            done = true;
             btn.textContent = "Entrer avec Pi";
             hint.textContent = "Touchez Entrer avec Pi, puis Autoriser.";
             showError((e && e.message ? e.message : String(e)) + "\\n" + location.origin);

@@ -63,7 +63,31 @@ export default function AppShell() {
     }
   }, []);
 
+  const applySession = useCallback((token: string) => {
+    setSession(token);
+    try {
+      localStorage.setItem("damie.session", token);
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
   useEffect(() => {
+    const piToken = sessionStorage.getItem("damie.piToken");
+    if (piToken) {
+      sessionStorage.removeItem("damie.piToken");
+      setError("");
+      api<{ session: string; pioneer: Pioneer }>("/api/auth/verify", null, { accessToken: piToken })
+        .then((data) => {
+          applySession(data.session);
+          applyPioneer(data.pioneer);
+          setView("lobby");
+        })
+        .catch((err) => {
+          setError(err instanceof Error ? err.message : "Connexion Pi impossible");
+        });
+      return;
+    }
     const savedSession = localStorage.getItem("damie.session");
     const savedPioneer = localStorage.getItem("damie.pioneer");
     if (!savedSession || !savedPioneer) {
@@ -84,7 +108,7 @@ export default function AppShell() {
       localStorage.removeItem("damie.pioneer");
       window.location.replace("/");
     }
-  }, [applyPioneer]);
+  }, [applyPioneer, applySession]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -260,6 +284,24 @@ export default function AppShell() {
     if (!session) return;
     const data = await api<{ pioneer: Pioneer }>("/api/profile", session, { action: "claim" });
     if (data.pioneer) applyPioneer(data.pioneer);
+  }
+
+  if (!pioneer) {
+    return (
+      <div className="app-root">
+        <div className="phone">
+          <div className="splash">
+            <div className="pill">GAME HUB</div>
+            <p>{error || "Ouverture du lobby…"}</p>
+            {error && (
+              <a className="gold-btn" href="/">
+                Réessayer
+              </a>
+            )}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (view === "play" && gameId) {
