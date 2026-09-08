@@ -12,9 +12,9 @@ export function piLoginHtml() {
     .pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.22);color:#8a6a1a;font-size:12px;font-weight:700}
     img{width:120px;height:120px;object-fit:contain;margin:16px 0 8px}
     p{color:#5c5648;line-height:1.45;font-size:14px;max-width:320px;margin:0 0 16px}
-    #pi-error{display:none;width:100%;max-width:320px;background:rgba(211,106,106,.12);color:#8a2f2f;border:1px solid rgba(211,106,106,.28);padding:10px 12px;border-radius:12px;font-size:13px;margin:0 0 12px;box-sizing:border-box}
+    #pi-error{display:none;width:100%;max-width:320px;background:rgba(211,106,106,.12);color:#8a2f2f;border:1px solid rgba(211,106,106,.28);padding:10px 12px;border-radius:12px;font-size:13px;margin:0 0 12px;box-sizing:border-box;white-space:pre-wrap}
     #pi-enter{width:100%;max-width:320px;border:0;border-radius:14px;padding:16px;font-size:16px;font-weight:800;color:#161000;background:linear-gradient(180deg,#f3db7a,#c89b22)}
-    .notice{margin-top:12px;font-size:12px;color:#7a7468}
+    .notice{margin-top:12px;font-size:12px;color:#7a7468;max-width:320px}
   </style>
 </head>
 <body>
@@ -28,10 +28,18 @@ export function piLoginHtml() {
   </div>
   <script>
     (function () {
+      try {
+        JSON.parse(localStorage.getItem("damie.pioneer") || "null");
+      } catch (e) {
+        localStorage.removeItem("damie.session");
+        localStorage.removeItem("damie.pioneer");
+      }
+
       var sandbox = location.hostname !== "damiegamehub.com" && location.hostname !== "www.damiegamehub.com";
       var btn = document.getElementById("pi-enter");
       var err = document.getElementById("pi-error");
       var hint = document.getElementById("pi-hint");
+      var initDone = null;
 
       function showError(text) {
         err.textContent = text || "";
@@ -39,22 +47,38 @@ export function piLoginHtml() {
       }
 
       function setBusy(busy) {
+        btn.disabled = false;
         btn.textContent = busy ? "Autorisez dans Pi…" : "Entrer avec Pi";
         hint.textContent = busy
           ? "Touchez Autoriser. Le lobby s'ouvre ensuite tout seul."
           : "Touchez Entrer avec Pi, puis Autoriser.";
       }
 
-      function boot() {
-        if (!window.Pi) {
-          setTimeout(boot, 40);
-          return;
+      function startInit() {
+        if (!window.Pi) return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+        if (!initDone) {
+          initDone = window.Pi.init({ version: "2.0", sandbox: sandbox }).catch(function () {
+            initDone = null;
+          });
         }
-        window.Pi.init({ version: "2.0", sandbox: sandbox }).catch(function () {});
+        return initDone || Promise.resolve();
       }
-      boot();
 
-      function login() {
+      if (window.Pi) startInit();
+      else {
+        var tries = 0;
+        var timer = setInterval(function () {
+          tries += 1;
+          if (window.Pi) {
+            clearInterval(timer);
+            startInit();
+          } else if (tries > 50) {
+            clearInterval(timer);
+          }
+        }, 100);
+      }
+
+      window.__piLogin = function () {
         showError("");
         setBusy(true);
         if (!window.Pi) {
@@ -62,7 +86,10 @@ export function piLoginHtml() {
           showError("Ouvrez cette page dans le Pi Browser, pas Chrome.");
           return;
         }
-        window.Pi.authenticate(["username"], function () {})
+        startInit()
+          .then(function () {
+            return window.Pi.authenticate(["username", "payments"], function () {});
+          })
           .then(function (auth) {
             if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
             return fetch("/api/auth/verify", {
@@ -85,14 +112,22 @@ export function piLoginHtml() {
           })
           .catch(function (e) {
             setBusy(false);
-            showError(e && e.message ? e.message : String(e));
+            showError((e && e.message ? e.message : String(e)) + "\\nURL Develop : " + location.origin);
           });
-      }
+      };
 
-      btn.onclick = login;
+      btn.onclick = window.__piLogin;
 
-      if (localStorage.getItem("damie.session") && localStorage.getItem("damie.pioneer")) {
-        location.replace("/hub");
+      var session = localStorage.getItem("damie.session");
+      var pioneer = localStorage.getItem("damie.pioneer");
+      if (session && pioneer) {
+        try {
+          JSON.parse(pioneer);
+          location.replace("/hub");
+        } catch (e) {
+          localStorage.removeItem("damie.session");
+          localStorage.removeItem("damie.pioneer");
+        }
       }
     })();
   </script>

@@ -80,6 +80,8 @@ export default function AppShell() {
         })
         .catch(() => undefined);
     } catch {
+      localStorage.removeItem("damie.session");
+      localStorage.removeItem("damie.pioneer");
       window.location.replace("/");
     }
   }, [applyPioneer]);
