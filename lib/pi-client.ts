@@ -11,11 +11,11 @@ export function hasPiSdk() {
   return typeof window !== "undefined" && Boolean(window.Pi);
 }
 
-export async function waitForPiSdk(ms = 5000) {
+export async function waitForPiSdk(ms = 8000) {
   const start = Date.now();
   while (Date.now() - start < ms) {
     if (hasPiSdk()) return true;
-    await new Promise((resolve) => setTimeout(resolve, 50));
+    await new Promise((resolve) => setTimeout(resolve, 40));
   }
   return hasPiSdk();
 }
@@ -39,7 +39,9 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
 let initPromise: Promise<void> | null = null;
 
 export function initPi() {
-  if (!hasPiSdk()) return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+  if (!hasPiSdk()) {
+    return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+  }
   if (!initPromise) {
     const sandbox = piSandbox();
     initPromise = withTimeout(
@@ -54,6 +56,16 @@ export function initPi() {
   return initPromise;
 }
 
+export function bootPi() {
+  if (typeof window === "undefined") {
+    return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+  }
+  return waitForPiSdk(8000).then((ok) => {
+    if (!ok) throw new Error("Ouvrez cette page dans le Pi Browser, pas Chrome.");
+    return initPi();
+  });
+}
+
 export function piError(err: unknown) {
   if (err instanceof Error && err.message) return err.message;
   if (typeof err === "string" && err) return err;
@@ -66,19 +78,25 @@ export function piError(err: unknown) {
   return `Connexion Pi refusée. L’URL de l’app dans Develop doit être exactement ${typeof window !== "undefined" ? window.location.origin : ""}.`;
 }
 
+/** Call from a click handler. Do not await anything before this. */
+export function startPiAuth(
+  onIncomplete?: (payment: PiPaymentDTO) => void,
+  scopes: PiScope[] = ["username", "payments"],
+) {
+  if (!hasPiSdk()) {
+    return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+  }
+  return window.Pi!.authenticate(scopes, (payment: PiPaymentDTO) => {
+    onIncomplete?.(payment);
+  });
+}
+
 export async function authenticatePi(
   onIncomplete?: (payment: PiPaymentDTO) => void,
-  scopes: PiScope[] = ["username"],
+  scopes: PiScope[] = ["username", "payments"],
 ) {
   await initPi();
-  const origin = typeof window !== "undefined" ? window.location.origin : "";
-  const network = piSandbox() ? "Testnet" : "Mainnet";
-  const timeoutMsg = `Pi n’a pas répondu (${network}). Dans Develop, l’URL de l’app ${network} doit être ${origin}. Touchez Entrer avec Pi, puis Autoriser.`;
-  return withTimeout(
-    window.Pi!.authenticate(scopes, (payment: PiPaymentDTO) => onIncomplete?.(payment)),
-    15000,
-    timeoutMsg,
-  );
+  return startPiAuth(onIncomplete, scopes);
 }
 
 export async function api<T>(path: string, session: string | null, body?: unknown, method = "POST") {

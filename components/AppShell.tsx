@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
-import { api, authenticatePi, hasPiSdk, initPi, piError, waitForPiSdk } from "@/lib/pi-client";
+import { api, bootPi, hasPiSdk, initPi, piError, startPiAuth } from "@/lib/pi-client";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
 
@@ -34,6 +34,7 @@ const ICONS: Record<string, string> = {
 export default function AppShell() {
   const [view, setView] = useState<View>("splash");
   const [busy, setBusy] = useState(false);
+  const [piReady, setPiReady] = useState(false);
   const [error, setError] = useState("");
   const [session, setSession] = useState<string | null>(null);
   const [pioneer, setPioneer] = useState<Pioneer | null>(null);
@@ -73,34 +74,13 @@ export default function AppShell() {
     }
   }, []);
 
-  const runPiAuth = useCallback(async () => {
-    const ready = await waitForPiSdk(5000);
-    if (!ready) {
-      throw new Error("Ouvrez cette page dans le Pi Browser, pas Chrome.");
-    }
-    const pending = { payment: null as PiPaymentDTO | null };
-    const auth = await authenticatePi((payment) => {
-      pending.payment = payment;
-    });
-    const data = await api<{ session: string; pioneer: Pioneer }>(
-      "/api/auth/verify",
-      null,
-      { accessToken: auth.accessToken },
-    );
-    applySession(data.session);
-    applyPioneer(data.pioneer);
-    if (pending.payment) {
-      const payment = pending.payment;
-      const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
-        paymentId: payment.identifier,
-        txid: payment.transaction?.txid,
-      });
-      if (done.pioneer) applyPioneer(done.pioneer);
-    }
-    setView("lobby");
-  }, [applyPioneer, applySession]);
-
   useEffect(() => {
+    bootPi()
+      .then(() => setPiReady(true))
+      .catch((err) => {
+        setError(piError(err));
+        setPiReady(true);
+      });
     const savedSession = localStorage.getItem("damie.session");
     const savedPioneer = localStorage.getItem("damie.pioneer");
     if (!savedSession || !savedPioneer) return;
@@ -142,18 +122,43 @@ export default function AppShell() {
     if (view === "rankings") refreshBoard(boardGame).catch(() => undefined);
   }, [view, boardGame, refreshBoard, refreshTours]);
 
-  async function connect() {
+  function connect() {
+    if (!hasPiSdk()) {
+      setError("Ouvrez cette page dans le Pi Browser, pas Chrome.");
+      return;
+    }
     connecting.current = true;
     setBusy(true);
     setError("");
-    try {
-      await runPiAuth();
-    } catch (err) {
-      setError(piError(err));
-    } finally {
-      connecting.current = false;
-      setBusy(false);
-    }
+    const pending = { payment: null as PiPaymentDTO | null };
+    startPiAuth((payment) => {
+      pending.payment = payment;
+    })
+      .then(async (auth) => {
+        const data = await api<{ session: string; pioneer: Pioneer }>(
+          "/api/auth/verify",
+          null,
+          { accessToken: auth.accessToken },
+        );
+        applySession(data.session);
+        applyPioneer(data.pioneer);
+        if (pending.payment) {
+          const payment = pending.payment;
+          const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
+            paymentId: payment.identifier,
+            txid: payment.transaction?.txid,
+          });
+          if (done.pioneer) applyPioneer(done.pioneer);
+        }
+        setView("lobby");
+      })
+      .catch((err) => {
+        setError(piError(err));
+      })
+      .finally(() => {
+        connecting.current = false;
+        setBusy(false);
+      });
   }
 
   async function pay(productId: string, amount: number, memo: string) {
@@ -165,7 +170,7 @@ export default function AppShell() {
     setBusy(true);
     setError("");
     try {
-      await authenticatePi(undefined, ["username", "payments"]);
+      await initPi();
       await new Promise<void>((resolve, reject) => {
         window.Pi!.createPayment(
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
@@ -320,13 +325,13 @@ export default function AppShell() {
               uniquement avec Pi.
             </p>
             {error && <div className="warn">{error}</div>}
-            <button className="gold-btn" onClick={() => connect()}>
-              {busy ? "Connexion Pi…" : "Entrer avec Pi"}
+            <button type="button" className="gold-btn" disabled={!piReady} onClick={connect}>
+              {!piReady ? "Préparation Pi…" : busy ? "Autorisez dans Pi…" : "Entrer avec Pi"}
             </button>
             <div className="notice">
               {busy
-                ? "Si une fenêtre Pi s’affiche, touchez Autoriser."
-                : "Touchez Entrer avec Pi · Testnet = workers.dev · Mainnet = damiegamehub.com"}
+                ? "Touchez Autoriser. Le lobby s’ouvre ensuite tout seul."
+                : "Touchez Entrer avec Pi, puis Autoriser."}
             </div>
           </div>
         </div>

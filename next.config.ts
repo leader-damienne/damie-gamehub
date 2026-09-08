@@ -29,6 +29,10 @@ const nextConfig: NextConfig = {
             value: "Content-Type, Authorization",
           },
           {
+            key: "Cache-Control",
+            value: "no-store, no-cache, must-revalidate",
+          },
+          {
             key: "Content-Security-Policy",
             value:
               "frame-ancestors 'self' https://sandbox.minepi.com https://app-cdn.minepi.com https://*.pinet.com https://minepi.com",
