@@ -353,12 +353,13 @@ img {
   flex-direction: column;
   align-items: center;
   text-align: center;
+  background: #ffffff;
+  color: #111111;
 }
 
 .splash img {
   width: min(78vw, 320px);
   margin: 18px 0 10px;
-  filter: drop-shadow(0 20px 30px rgba(212, 175, 55, 0.18));
 }
 
 .splash h1 {
@@ -371,11 +372,11 @@ img {
   margin: 4px 0 18px;
   letter-spacing: 0.34em;
   font-size: 13px;
-  color: var(--gold);
+  color: #8a6a1a;
 }
 
 .splash p {
-  color: var(--muted);
+  color: #5c5648;
   line-height: 1.5;
   font-size: 14px;
   max-width: 340px;
@@ -385,6 +386,15 @@ img {
   width: 100%;
   max-width: 320px;
   margin-top: auto;
+}
+
+.splash .notice {
+  color: #7a7468;
+}
+
+.splash .warn {
+  color: #8a2f2f;
+  background: rgba(211, 106, 106, 0.12);
 }
 
 .notice {
