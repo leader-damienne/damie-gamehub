@@ -24,7 +24,7 @@ export function piLoginHtml() {
     <p>10 jeux instantanés, tournois, classements et boutique. Connexion et paiements uniquement avec Pi.</p>
     <div id="pi-error"></div>
     <button type="button" id="pi-enter">Entrer avec Pi</button>
-    <div id="pi-hint" class="notice"></div>
+    <div id="pi-hint" class="notice">Touchez Entrer avec Pi, puis Autoriser.</div>
   </div>
   <script>
     (function () {
@@ -39,17 +39,6 @@ export function piLoginHtml() {
       var errBox = document.getElementById("pi-error");
       var hint = document.getElementById("pi-hint");
       var inited = false;
-      hint.textContent = origin;
-
-      function isPiBrowser() {
-        var ua = navigator.userAgent || "";
-        if (/PiBrowser|PiNetwork|Pi Browser/i.test(ua)) return true;
-        try {
-          return Boolean(window.Pi && window.Pi.nativeFeaturesList);
-        } catch (e) {
-          return false;
-        }
-      }
 
       function showError(text) {
         errBox.textContent = text || "";
@@ -68,34 +57,26 @@ export function piLoginHtml() {
 
       function initPi() {
         if (!window.Pi) {
-          return Promise.reject(new Error("Ouvrez ce lien dans le Pi Browser."));
+          return Promise.reject(new Error("Ouvrez ce lien dans le Pi Browser, pas Chrome."));
         }
         if (inited) return Promise.resolve();
         return withTimeout(
           window.Pi.init({ version: "2.0", sandbox: sandbox }),
           8000,
-          "Pi.init bloque. Dans Develop (app Testnet), collez exactement : " + origin
+          "Pi.init bloque. URL Testnet Develop : " + origin
         ).then(function () { inited = true; });
       }
 
-      if (!isPiBrowser()) {
-        showError("Ouvrez ce lien DANS le Pi Browser (l'app Pi), pas Chrome.");
-      }
-
-      window.Pi && initPi().catch(function (e) { showError(e.message); });
+      window.Pi && initPi().catch(function () { inited = false; });
 
       btn.onclick = function () {
         showError("");
-        if (!isPiBrowser()) {
-          showError("Ouvrez ce lien DANS le Pi Browser (l'app Pi), pas Chrome.");
-          return;
-        }
         if (!window.Pi) {
-          showError("Pi SDK absent. Rouvrez la page dans le Pi Browser.");
+          showError("Ouvrez ce lien dans le Pi Browser, pas Chrome.");
           return;
         }
         btn.textContent = "Autorisez dans Pi…";
-        hint.textContent = "Touchez Autoriser dans la fenetre Pi.";
+        hint.textContent = "Touchez Autoriser.";
         function doAuth() {
           return window.Pi.authenticate(["username", "payments"], function () {});
         }
@@ -106,7 +87,7 @@ export function piLoginHtml() {
           location.replace("/hub");
         }).catch(function (e) {
           btn.textContent = "Entrer avec Pi";
-          hint.textContent = origin;
+          hint.textContent = "Touchez Entrer avec Pi, puis Autoriser.";
           showError((e && e.message ? e.message : String(e)));
         });
       };
