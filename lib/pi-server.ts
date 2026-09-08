@@ -10,9 +10,11 @@ export async function verifyAccessToken(accessToken: string) {
     cache: "no-store",
   });
   if (!res.ok) {
-    throw new Error("Jeton Pi invalide");
+    throw new Error(`Jeton Pi invalide (${res.status})`);
   }
-  return (await res.json()) as { uid: string; username?: string };
+  const me = (await res.json()) as { uid?: string; username?: string };
+  if (!me.uid) throw new Error("Réponse Pi /me incomplète");
+  return me as { uid: string; username?: string };
 }
 
 export async function approvePayment(paymentId: string) {

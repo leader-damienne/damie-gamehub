@@ -1,9 +1,9 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
-import { api, bootPi, hasPiSdk, initPi, piError, startPiAuth } from "@/lib/pi-client";
+import { api, hasPiSdk, initPi } from "@/lib/pi-client";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
 
@@ -32,9 +32,8 @@ const ICONS: Record<string, string> = {
 };
 
 export default function AppShell() {
-  const [view, setView] = useState<View>("splash");
+  const [view, setView] = useState<View>("lobby");
   const [busy, setBusy] = useState(false);
-  const [piReady, setPiReady] = useState(false);
   const [error, setError] = useState("");
   const [session, setSession] = useState<string | null>(null);
   const [pioneer, setPioneer] = useState<Pioneer | null>(null);
@@ -54,7 +53,6 @@ export default function AppShell() {
   );
 
   const boosted = Boolean(pioneer && pioneer.boostUntil > Date.now());
-  const connecting = useRef(false);
 
   const applyPioneer = useCallback((next: Pioneer) => {
     setPioneer(next);
@@ -65,36 +63,24 @@ export default function AppShell() {
     }
   }, []);
 
-  const applySession = useCallback((token: string) => {
-    setSession(token);
-    try {
-      localStorage.setItem("damie.session", token);
-    } catch {
-      /* ignore */
-    }
-  }, []);
-
   useEffect(() => {
-    bootPi()
-      .then(() => setPiReady(true))
-      .catch((err) => {
-        setError(piError(err));
-        setPiReady(true);
-      });
     const savedSession = localStorage.getItem("damie.session");
     const savedPioneer = localStorage.getItem("damie.pioneer");
-    if (!savedSession || !savedPioneer) return;
+    if (!savedSession || !savedPioneer) {
+      window.location.replace("/");
+      return;
+    }
     try {
       setSession(savedSession);
       setPioneer(JSON.parse(savedPioneer) as Pioneer);
+      setView("lobby");
       api<{ pioneer: Pioneer | null }>("/api/profile", savedSession)
         .then((data) => {
           if (data.pioneer) applyPioneer(data.pioneer);
-          setView("lobby");
         })
-        .catch(() => localStorage.removeItem("damie.session"));
+        .catch(() => undefined);
     } catch {
-      localStorage.removeItem("damie.session");
+      window.location.replace("/");
     }
   }, [applyPioneer]);
 
@@ -121,45 +107,6 @@ export default function AppShell() {
     if (view === "tournaments") refreshTours().catch(() => undefined);
     if (view === "rankings") refreshBoard(boardGame).catch(() => undefined);
   }, [view, boardGame, refreshBoard, refreshTours]);
-
-  function connect() {
-    if (!hasPiSdk()) {
-      setError("Ouvrez cette page dans le Pi Browser, pas Chrome.");
-      return;
-    }
-    connecting.current = true;
-    setBusy(true);
-    setError("");
-    const pending = { payment: null as PiPaymentDTO | null };
-    startPiAuth((payment) => {
-      pending.payment = payment;
-    })
-      .then(async (auth) => {
-        const data = await api<{ session: string; pioneer: Pioneer }>(
-          "/api/auth/verify",
-          null,
-          { accessToken: auth.accessToken },
-        );
-        applySession(data.session);
-        applyPioneer(data.pioneer);
-        if (pending.payment) {
-          const payment = pending.payment;
-          const done = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", data.session, {
-            paymentId: payment.identifier,
-            txid: payment.transaction?.txid,
-          });
-          if (done.pioneer) applyPioneer(done.pioneer);
-        }
-        setView("lobby");
-      })
-      .catch((err) => {
-        setError(piError(err));
-      })
-      .finally(() => {
-        connecting.current = false;
-        setBusy(false);
-      });
-  }
 
   async function pay(productId: string, amount: number, memo: string) {
     if (!session || !pioneer) return false;
@@ -311,32 +258,6 @@ export default function AppShell() {
     if (!session) return;
     const data = await api<{ pioneer: Pioneer }>("/api/profile", session, { action: "claim" });
     if (data.pioneer) applyPioneer(data.pioneer);
-  }
-
-  if (view === "splash") {
-    return (
-      <div className="app-root">
-        <div className="phone">
-          <div className="splash">
-            <div className="pill">GAME HUB</div>
-            <img src="/logo-1024.png" alt="Damie GameHub" />
-            <p>
-              10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
-              uniquement avec Pi.
-            </p>
-            {error && <div className="warn">{error}</div>}
-            <button type="button" className="gold-btn" disabled={!piReady} onClick={connect}>
-              {!piReady ? "Préparation Pi…" : busy ? "Autorisez dans Pi…" : "Entrer avec Pi"}
-            </button>
-            <div className="notice">
-              {busy
-                ? "Touchez Autoriser. Le lobby s’ouvre ensuite tout seul."
-                : "Touchez Entrer avec Pi, puis Autoriser."}
-            </div>
-          </div>
-        </div>
-      </div>
-    );
   }
 
   if (view === "play" && gameId) {

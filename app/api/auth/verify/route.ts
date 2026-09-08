@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { signSession } from "@/lib/session";
-import { upsertPioneer } from "@/lib/store";
+import { defaultPioneer, upsertPioneer } from "@/lib/store";
 import { verifyAccessToken } from "@/lib/pi-server";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +13,12 @@ export async function POST(req: Request) {
   try {
     const me = await verifyAccessToken(body.accessToken);
     const username = me.username || `Pioneer-${me.uid.slice(0, 6)}`;
-    const pioneer = upsertPioneer(me.uid, username);
+    let pioneer;
+    try {
+      pioneer = upsertPioneer(me.uid, username);
+    } catch {
+      pioneer = defaultPioneer(me.uid, username);
+    }
     return NextResponse.json({
       session: signSession(pioneer.uid, pioneer.username),
       pioneer,

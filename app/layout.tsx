@@ -38,9 +38,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="fr">
       <head>
         <link rel="apple-touch-icon" href="/logo-1024.png" />
+        <script src="https://sdk.minepi.com/pi-sdk.js" />
         <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
       </head>
-      <body className={outfit.className}>{children}</body>
+      <body className={outfit.className}>
+        {children}
+        <script src="/pi-login.js?v=4" />
+      </body>
     </html>
   );
 }
