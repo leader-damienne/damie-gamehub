@@ -58,7 +58,7 @@ img {
   max-width: 460px;
   min-height: 100dvh;
   position: relative;
-  overflow: hidden;
+  overflow: auto;
   background:
     radial-gradient(700px 280px at 80% -40px, rgba(240, 213, 106, 0.08), transparent),
     #080808;
@@ -358,7 +358,9 @@ img {
 }
 
 .splash img {
-  width: min(78vw, 320px);
+  width: 140px;
+  height: 140px;
+  object-fit: contain;
   margin: 18px 0 10px;
 }
 
@@ -391,6 +393,11 @@ img {
 .splash .gold-btn {
   width: 100%;
   max-width: 320px;
+  margin-top: 8px;
+  display: block;
+  text-decoration: none;
+  text-align: center;
+  box-sizing: border-box;
 }
 
 .splash .notice {

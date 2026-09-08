@@ -1,6 +1,3 @@
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
 export default function HomePage() {
   return (
     <div className="app-root">
@@ -12,17 +9,10 @@ export default function HomePage() {
             10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
             uniquement avec Pi.
           </p>
-          <p id="pi-error" className="warn" hidden></p>
-          <div
-            className="pi-enter-wrap"
-            dangerouslySetInnerHTML={{
-              __html:
-                '<button type="button" class="gold-btn" id="pi-enter" onclick="__damieLogin()">Entrer avec Pi</button>',
-            }}
-          />
-          <div id="pi-hint" className="notice">
-            Touchez Entrer avec Pi, puis Autoriser.
-          </div>
+          <a className="gold-btn" href="/enter">
+            Entrer avec Pi
+          </a>
+          <div className="notice">Touchez Entrer avec Pi, puis Autoriser.</div>
         </div>
       </div>
     </div>
