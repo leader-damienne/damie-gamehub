@@ -1,8 +1,8 @@
 import { Outfit } from "next/font/google";
-import Script from "next/script";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { APP_URL } from "@/lib/site";
+import { PI_LOGIN_SCRIPT } from "@/lib/pi-login-script";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -39,12 +39,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="apple-touch-icon" href="/logo-1024.png" />
         <script src="https://sdk.minepi.com/pi-sdk.js" />
-        <Script src="https://sdk.minepi.com/pi-sdk.js" strategy="beforeInteractive" />
+        <script dangerouslySetInnerHTML={{ __html: PI_LOGIN_SCRIPT }} />
       </head>
-      <body className={outfit.className}>
-        {children}
-        <script src="/pi-login.js?v=4" />
-      </body>
+      <body className={outfit.className}>{children}</body>
     </html>
   );
 }

@@ -382,10 +382,15 @@ img {
   max-width: 340px;
 }
 
-.splash .gold-btn {
+.splash .pi-enter-wrap {
   width: 100%;
   max-width: 320px;
   margin-top: auto;
+}
+
+.splash .gold-btn {
+  width: 100%;
+  max-width: 320px;
 }
 
 .splash .notice {
