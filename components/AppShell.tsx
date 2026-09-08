@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
-import { api, hasPiSdk, initPi, waitForPiSdk } from "@/lib/pi-client";
+import { api, authenticatePi, hasPiSdk, initPi, waitForPiSdk } from "@/lib/pi-client";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
 
@@ -77,9 +77,8 @@ export default function AppShell() {
     if (!hasPiSdk()) {
       throw new Error("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
     }
-    await initPi();
     const pending = { payment: null as PiPaymentDTO | null };
-    const auth = await window.Pi!.authenticate(["username", "payments"], (payment) => {
+    const auth = await authenticatePi((payment) => {
       pending.payment = payment;
     });
     const data = await api<{ session: string; pioneer: Pioneer }>(
@@ -100,10 +99,14 @@ export default function AppShell() {
     setView("lobby");
   }, [applyPioneer, applySession]);
 
+  const runPiAuthRef = useRef(runPiAuth);
+  runPiAuthRef.current = runPiAuth;
+
   useEffect(() => {
-    let cancelled = false;
+    let live = true;
     (async () => {
       setBusy(true);
+      setError("");
       try {
         const savedSession = localStorage.getItem("damie.session");
         const savedPioneer = localStorage.getItem("damie.pioneer");
@@ -112,7 +115,7 @@ export default function AppShell() {
             setSession(savedSession);
             setPioneer(JSON.parse(savedPioneer) as Pioneer);
             const data = await api<{ pioneer: Pioneer | null }>("/api/profile", savedSession);
-            if (cancelled) return;
+            if (!live) return;
             if (data.pioneer) applyPioneer(data.pioneer);
             setView("lobby");
           } catch {
@@ -120,12 +123,12 @@ export default function AppShell() {
           }
         }
         const ready = await waitForPiSdk();
-        if (cancelled) return;
+        if (!live) return;
         if (ready) {
           if (!connecting.current) {
             connecting.current = true;
             try {
-              await runPiAuth();
+              await runPiAuthRef.current();
             } finally {
               connecting.current = false;
             }
@@ -134,15 +137,15 @@ export default function AppShell() {
           setError("Ouvrez Damie GameHub dans le Pi Browser pour vous connecter.");
         }
       } catch (err) {
-        if (!cancelled) setError(err instanceof Error ? err.message : "Connexion Pi impossible");
+        if (live) setError(err instanceof Error ? err.message : "Connexion Pi impossible");
       } finally {
-        if (!cancelled) setBusy(false);
+        if (live) setBusy(false);
       }
     })();
     return () => {
-      cancelled = true;
+      live = false;
     };
-  }, [applyPioneer, runPiAuth]);
+  }, [applyPioneer]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -351,7 +354,9 @@ export default function AppShell() {
               {busy ? "Connexion Pi…" : "Entrer avec Pi"}
             </button>
             <div className="notice">
-              {busy ? "Connexion automatique avec Pi…" : "Auth Pi uniquement · transactions en π uniquement"}
+              {busy
+                ? "Connexion automatique… Si une fenêtre Pi s’affiche, touchez Autoriser."
+                : "Auth Pi uniquement · transactions en π uniquement"}
             </div>
           </div>
         </div>
