@@ -23,7 +23,7 @@ export function piLoginHtml() {
     <img src="/logo-1024.png" alt="Damie GameHub" />
     <p>10 jeux instantanés, tournois, classements et boutique. Connexion et paiements uniquement avec Pi.</p>
     <div id="pi-error"></div>
-    <button type="button" id="pi-enter">Entrer avec Pi</button>
+    <button type="button" id="pi-enter" onclick="window.__piLogin&&window.__piLogin()">Entrer avec Pi</button>
     <div id="pi-hint" class="notice">Touchez Entrer avec Pi, puis Autoriser.</div>
   </div>
   <script>
@@ -38,38 +38,17 @@ export function piLoginHtml() {
       var btn = document.getElementById("pi-enter");
       var errBox = document.getElementById("pi-error");
       var hint = document.getElementById("pi-hint");
-      var inited = false;
 
       function showError(text) {
         errBox.textContent = text || "";
         errBox.style.display = text ? "block" : "none";
       }
 
-      function withTimeout(promise, ms, message) {
-        return new Promise(function (resolve, reject) {
-          var t = setTimeout(function () { reject(new Error(message)); }, ms);
-          promise.then(
-            function (v) { clearTimeout(t); resolve(v); },
-            function (e) { clearTimeout(t); reject(e); }
-          );
-        });
+      if (window.Pi) {
+        window.Pi.init({ version: "2.0", sandbox: sandbox }).catch(function () {});
       }
 
-      function initPi() {
-        if (!window.Pi) {
-          return Promise.reject(new Error("Ouvrez ce lien dans le Pi Browser, pas Chrome."));
-        }
-        if (inited) return Promise.resolve();
-        return withTimeout(
-          window.Pi.init({ version: "2.0", sandbox: sandbox }),
-          8000,
-          "Pi.init bloque. URL Testnet Develop : " + origin
-        ).then(function () { inited = true; });
-      }
-
-      window.Pi && initPi().catch(function () { inited = false; });
-
-      btn.onclick = function () {
+      function login() {
         showError("");
         if (!window.Pi) {
           showError("Ouvrez ce lien dans le Pi Browser, pas Chrome.");
@@ -77,20 +56,21 @@ export function piLoginHtml() {
         }
         btn.textContent = "Autorisez dans Pi…";
         hint.textContent = "Touchez Autoriser.";
-        function doAuth() {
-          return window.Pi.authenticate(["username", "payments"], function () {});
-        }
-        var run = inited ? doAuth() : initPi().then(doAuth);
-        run.then(function (auth) {
-          if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
-          sessionStorage.setItem("damie.piToken", auth.accessToken);
-          location.replace("/hub");
-        }).catch(function (e) {
-          btn.textContent = "Entrer avec Pi";
-          hint.textContent = "Touchez Entrer avec Pi, puis Autoriser.";
-          showError((e && e.message ? e.message : String(e)));
-        });
-      };
+        window.Pi.authenticate(["username", "payments"], function () {})
+          .then(function (auth) {
+            if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
+            sessionStorage.setItem("damie.piToken", auth.accessToken);
+            location.replace("/hub");
+          })
+          .catch(function (e) {
+            btn.textContent = "Entrer avec Pi";
+            hint.textContent = "Touchez Entrer avec Pi, puis Autoriser.";
+            showError((e && e.message ? e.message : String(e)) + "\\n" + origin);
+          });
+      }
+
+      window.__piLogin = login;
+      btn.onclick = login;
     })();
   </script>
 </body>
