@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
-import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, piToDgh } from "@/lib/economy";
+import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
+import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, piToDgh } from "@/lib/economy";
 import { api, hasPiSdk, initPi } from "@/lib/pi-client";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
+import GameBrief from "@/components/GameBrief";
 
 type TourRow = {
   id: string;
@@ -16,19 +17,6 @@ type TourRow = {
   endsAt: number;
   players: number;
   board: { uid: string; username: string; best: number }[];
-};
-
-const ICONS: Record<string, string> = {
-  "crown-catch": "♛",
-  "reflex-ring": "◎",
-  "memory-vault": "▣",
-  "orbit-dash": "✧",
-  "stack-king": "▀",
-  "pulse-tap": "♩",
-  "grid-merge": "⊞",
-  "gold-slash": "⚔",
-  "king-tap": "●",
-  "maze-crown": "▦",
 };
 
 export default function AppShell() {
@@ -313,6 +301,7 @@ export default function AppShell() {
             boosted={boosted}
             lives={pioneer?.lives ?? 0}
             stake={stake}
+            skipIntro={!tournamentId}
             onExit={() => {
               setView("lobby");
               setGameId(null);
@@ -344,14 +333,14 @@ export default function AppShell() {
           {view !== "privacy" && (
             <div className="topbar">
               <div className="brand-mini">
-                <img src="/logo.png" alt="" />
+                <img src="/logo.png" alt="Damie GameHub" />
                 <div>
-                  <strong>DAMIE</strong>
-                  <span>GAME HUB</span>
+                  <strong>{pioneer.username}</strong>
+                  <span>Pioneer</span>
                 </div>
               </div>
               <div className="pill" onClick={() => setView("wallet")} style={{ cursor: "pointer" }}>
-                {Number(pioneer?.piCredit || 0).toFixed(2)} π · {pioneer?.damie ?? 0} {TOKEN}
+                {Number(pioneer?.piCredit || 0).toFixed(2)} π · {formatDgh(pioneer?.damie ?? 0)} {TOKEN}
               </div>
             </div>
           )}
@@ -361,13 +350,20 @@ export default function AppShell() {
           {view === "lobby" && pioneer && (
             <>
               <div className="hero">
-                <div className="pill">Saison Couronne</div>
-                <h2>Jouez. Grimpez. Régnez.</h2>
-                <p>Déposez des π, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en π pour retirer.</p>
+                <div className="hero-row">
+                  <div className="hero-copy">
+                    <div className="pill">Saison Couronne</div>
+                    <p className="hello">Bienvenue</p>
+                    <h2>{pioneer.username}</h2>
+                  </div>
+                  <img className="hero-logo" src="/logo.png" alt="Damie GameHub" />
+                </div>
+                <p className="hero-lead">
+                  Déposez des π, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en π pour retirer.
+                </p>
                 <button className="gold-btn" onClick={() => setStakePick("crown-catch")}>
                   Jouer maintenant
                 </button>
-                <img className="mark" src="/logo.png" alt="" />
               </div>
 
               <div className="section-title">
@@ -406,8 +402,8 @@ export default function AppShell() {
                     className="card"
                     onClick={() => setStakePick(g.id)}
                   >
-                    <div className="thumb" style={{ background: `linear-gradient(180deg, ${g.accent}55, #101010)` }}>
-                      <span>{ICONS[g.id]}</span>
+                    <div className="thumb">
+                      <img src={gameCover(g.id)} alt={g.title} />
                     </div>
                     <div className="card-body">
                       <b>{g.title}</b>
@@ -439,12 +435,17 @@ export default function AppShell() {
                   const hrs = Math.floor(remain / 3600000);
                   return (
                     <div key={t.id} className="shop-item">
-                      <h4>{t.title}</h4>
-                      <p>
-                        {game?.title} · {t.players} joueurs · {hrs}h restantes
-                        <br />
-                        Récompense : {def?.prizeLabel}
-                      </p>
+                      <div className="tour-head">
+                        <img className="tour-cover" src={gameCover(t.gameId)} alt="" />
+                        <div>
+                          <h4>{t.title}</h4>
+                          <p>
+                            {game?.title} · {t.players} joueurs · {hrs}h restantes
+                            <br />
+                            Récompense : {def?.prizeLabel}
+                          </p>
+                        </div>
+                      </div>
                       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <span className="price">{t.entryPi === 0 ? "Gratuit" : `${piToDgh(t.entryPi)} ${TOKEN}`}</span>
                         <button className="gold-btn" disabled={busy} onClick={() => joinTour(t)}>
@@ -502,7 +503,7 @@ export default function AppShell() {
                   <span>π à échanger</span>
                 </div>
                 <div className="stat">
-                  <b>{pioneer.damie || 0}</b>
+                  <b>{formatDgh(pioneer.damie || 0)}</b>
                   <span>{TOKEN} jouables</span>
                 </div>
                 <div className="stat">
@@ -661,7 +662,7 @@ export default function AppShell() {
                 </div>
                 <div className="list-item">
                   <span>{TOKEN} jouables</span>
-                  <b>{pioneer.damie || 0}</b>
+                  <b>{formatDgh(pioneer.damie || 0)}</b>
                 </div>
                 <div className="list-item">
                   <span>Pièces</span>
@@ -734,12 +735,8 @@ export default function AppShell() {
         )}
         {stakePick && pioneer && (
           <div className="overlay">
-            <div className="panel">
-              <h3>Miser pour jouer</h3>
-              <p>
-                Mises et gains en {TOKEN}. Score 150 = 50% · 300 = mise rendue · 600 = x1.5 · 1000 = x2.
-                Sinon la mise est perdue. Échangez d’abord vos π en {TOKEN}.
-              </p>
+            <div className="panel panel-brief">
+              {gameById(stakePick) && <GameBrief game={gameById(stakePick)!} />}
               <div style={{ display: "grid", gap: 8, marginTop: 12 }}>
                 {STAKES.map((amount) => (
                   <button
@@ -748,7 +745,7 @@ export default function AppShell() {
                     disabled={amount > 0 && (pioneer.damie || 0) < amount}
                     onClick={() => startGame(stakePick, amount)}
                   >
-                    {amount === 0 ? "Jouer sans mise" : `Miser ${amount} ${TOKEN}`}
+                    {amount === 0 ? `Jouer sans mise · microns ${TOKEN}` : `Miser ${amount} ${TOKEN}`}
                   </button>
                 ))}
                 <button className="ghost-btn" onClick={() => setStakePick(null)}>

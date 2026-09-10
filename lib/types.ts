@@ -18,6 +18,8 @@ export type GameDef = {
   category: GameCategory;
   accent: string;
   howTo: string;
+  rules: string[];
+  perks: string[];
 };
 
 export type Pioneer = {

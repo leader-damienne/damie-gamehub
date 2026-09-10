@@ -1,8 +1,9 @@
 "use client";
 
 import { useCallback, useMemo, useState } from "react";
+import GameBrief from "@/components/GameBrief";
 import { gameById } from "@/lib/catalog";
-import { TOKEN } from "@/lib/economy";
+import { TOKEN, formatDgh, freePlayDgh, stakePayout } from "@/lib/economy";
 import {
   CrownCatch,
   GoldSlash,
@@ -17,17 +18,27 @@ type Props = {
   boosted: boolean;
   lives: number;
   stake: number;
+  skipIntro?: boolean;
   onExit: () => void;
   onFinished: (score: number) => void;
   onUseLife: () => Promise<boolean>;
 };
 
-export default function GameScreen({ gameId, boosted, lives, stake, onExit, onFinished, onUseLife }: Props) {
+export default function GameScreen({
+  gameId,
+  boosted,
+  lives,
+  stake,
+  skipIntro = false,
+  onExit,
+  onFinished,
+  onUseLife,
+}: Props) {
   const game = gameById(gameId);
   const [score, setScore] = useState(0);
   const [over, setOver] = useState<number | null>(null);
   const [nonce, setNonce] = useState(0);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(skipIntro);
   const [usingLife, setUsingLife] = useState(false);
 
   const finish = useCallback((value: number) => setOver(value), []);
@@ -59,6 +70,10 @@ export default function GameScreen({ gameId, boosted, lives, stake, onExit, onFi
     }
   }, [finish, gameId, liveScore, nonce]);
 
+  const finalScore = over === null ? 0 : boosted ? over * 2 : over;
+  const reward =
+    over === null ? 0 : stake > 0 ? stakePayout(finalScore, stake) : freePlayDgh(finalScore);
+
   return (
     <div className="game-stage">
       <div className="game-hud">
@@ -67,7 +82,7 @@ export default function GameScreen({ gameId, boosted, lives, stake, onExit, onFi
         </button>
         <div className="pill">
           {game?.title} · {score}
-          {stake > 0 ? ` · mise ${stake} ${TOKEN}` : ""}
+          {stake > 0 ? ` · mise ${stake} ${TOKEN}` : ` · sans mise`}
           {boosted ? " · x2" : ""}
         </div>
       </div>
@@ -76,12 +91,11 @@ export default function GameScreen({ gameId, boosted, lives, stake, onExit, onFi
           {body}
         </div>
       )}
-      {!ready && (
+      {!ready && game && (
         <div className="overlay">
-          <div className="panel">
-            <h3>{game?.title}</h3>
-            <p>{game?.howTo}</p>
-            <button className="gold-btn" style={{ marginTop: 16 }} onClick={() => setReady(true)}>
+          <div className="panel panel-brief">
+            <GameBrief game={game} />
+            <button className="gold-btn" style={{ marginTop: 16, width: "100%" }} onClick={() => setReady(true)}>
               Jouer
             </button>
           </div>
@@ -92,8 +106,17 @@ export default function GameScreen({ gameId, boosted, lives, stake, onExit, onFi
           <div className="panel">
             <h3>Partie terminée</h3>
             <p>
-              Score{boosted ? " boosté" : ""} : <b>{boosted ? over * 2 : over}</b>
-              {stake > 0 ? ` · mise ${stake} ${TOKEN}` : ""}
+              Score{boosted ? " boosté" : ""} : <b>{finalScore}</b>
+              {stake > 0 ? ` · mise ${stake} ${TOKEN}` : " · sans mise"}
+            </p>
+            <p className="brief-tag">
+              {stake > 0
+                ? reward > 0
+                  ? `Gain de mise : ${formatDgh(reward)} ${TOKEN}`
+                  : `Mise perdue`
+                : reward > 0
+                  ? `Microns gagnés : ${formatDgh(reward)} ${TOKEN}`
+                  : `Aucun micron cette partie`}
             </p>
             <div style={{ display: "grid", gap: 8, marginTop: 16 }}>
               {lives > 0 && (

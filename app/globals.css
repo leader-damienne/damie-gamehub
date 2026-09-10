@@ -104,14 +104,19 @@ img {
 
 .brand-mini strong {
   display: block;
+  max-width: 42vw;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-size: 15px;
-  letter-spacing: 0.16em;
+  letter-spacing: 0.02em;
 }
 
 .brand-mini span {
   color: var(--muted);
   font-size: 11px;
   letter-spacing: 0.18em;
+  text-transform: uppercase;
 }
 
 .pill {
@@ -128,11 +133,9 @@ img {
 }
 
 .hero {
-  position: relative;
   border-radius: 24px;
   overflow: hidden;
-  padding: 22px 20px 20px;
-  min-height: 168px;
+  padding: 18px;
   background:
     linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(12, 12, 12, 0.9) 48%),
     #111;
@@ -140,24 +143,52 @@ img {
   margin-bottom: 18px;
 }
 
-.hero h2 {
-  margin: 0 0 6px;
-  font-size: 26px;
-  line-height: 1.1;
+.hero-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
-.hero p {
-  margin: 0 0 16px;
+.hero-copy {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-logo {
+  width: 84px;
+  height: 84px;
+  flex: 0 0 84px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 18px;
+  border: 1px solid var(--line);
+}
+
+.hero .hello {
+  margin: 10px 0 0;
+  color: var(--gold-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hero h2 {
+  margin: 2px 0 0;
+  font-size: 24px;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+}
+
+.hero-lead {
+  margin: 0 0 14px;
   color: var(--muted);
   font-size: 13px;
 }
 
-.hero .mark {
-  position: absolute;
-  right: -8px;
-  bottom: -18px;
-  width: 150px;
-  opacity: 0.9;
+.hero .gold-btn {
+  width: 100%;
 }
 
 .row {
@@ -224,15 +255,51 @@ img {
 }
 
 .thumb {
-  height: 92px;
-  display: grid;
-  place-items: center;
-  position: relative;
+  aspect-ratio: 1;
+  background: #101010;
+  overflow: hidden;
 }
 
-.thumb span {
-  font-size: 34px;
-  filter: drop-shadow(0 8px 12px rgba(0, 0, 0, 0.45));
+.thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.cover-lg {
+  width: 112px;
+  height: 112px;
+  object-fit: cover;
+  border-radius: 18px;
+  margin: 0 auto 14px;
+  display: block;
+  border: 1px solid var(--line);
+}
+
+.tour-head {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.tour-cover {
+  width: 64px;
+  height: 64px;
+  object-fit: cover;
+  border-radius: 14px;
+  flex: 0 0 64px;
+  border: 1px solid var(--line);
+}
+
+.tour-head h4,
+.tour-head p {
+  margin: 0;
+}
+
+.tour-head p {
+  margin-top: 4px;
 }
 
 .card-body {
@@ -549,6 +616,44 @@ img {
   border-radius: 20px;
   padding: 20px;
   text-align: center;
+}
+
+.panel-brief {
+  max-height: min(86dvh, 720px);
+  overflow-y: auto;
+  text-align: left;
+}
+
+.panel-brief h3,
+.panel-brief .cover-lg {
+  text-align: center;
+}
+
+.brief-tag {
+  margin: 0 0 12px;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.brief h4 {
+  margin: 12px 0 6px;
+  color: var(--gold-2);
+  font-size: 12px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.brief ul {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.brief li + li {
+  margin-top: 4px;
 }
 
 .panel h3 {

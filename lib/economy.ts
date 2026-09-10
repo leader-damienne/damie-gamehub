@@ -6,8 +6,29 @@ export const MIN_WITHDRAW = 0.1;
 export const MIN_CONVERT = 100;
 export const MIN_SWAP_PI = 0.1;
 
+/** 1 micron = 0,01 DGH. Les parties sans mise en rapportent selon le score. */
+export const MICRON = 0.01;
+export const FREE_PLAY_MAX_DGH = 0.25;
+
 export function roundPi(n: number) {
   return Math.round(n * 10000) / 10000;
+}
+
+export function roundDgh(n: number) {
+  return Math.round(n * 100) / 100;
+}
+
+export function formatDgh(n: number) {
+  const v = roundDgh(Number(n) || 0);
+  const text = Number.isInteger(v) ? String(v) : v.toFixed(2);
+  return text.replace(".", ",");
+}
+
+/** Parties sans mise : 1 micron (0,01 DGH) tous les 40 pts, min 1, max 0,25 DGH. */
+export function freePlayDgh(score: number) {
+  if (score <= 0) return 0;
+  const microns = Math.min(25, Math.max(1, Math.floor(score / 40)));
+  return roundDgh(microns * MICRON);
 }
 
 export function piToDgh(pi: number) {
@@ -26,8 +47,4 @@ export function stakePayout(score: number, stake: number) {
   else if (score >= 300) m = 1;
   else if (score >= 150) m = 0.5;
   return Math.floor(stake * m);
-}
-
-export function dghFromScore(score: number) {
-  return Math.max(1, Math.floor(score / 8));
 }

@@ -8,6 +8,12 @@ export const GAMES: GameDef[] = [
     category: "arcade",
     accent: "#d4af37",
     howTo: "Glissez le panier. Attrapez l’or, évitez les boules noires.",
+    rules: [
+      "Glissez le panier en bas de l’écran.",
+      "Attrapez les pièces et couronnes d’or pour marquer.",
+      "Une boule noire termine la partie.",
+    ],
+    perks: ["Réflexes et précision rapportent vite des points.", "Idéal pour enchaîner les missions du jour."],
   },
   {
     id: "reflex-ring",
@@ -16,6 +22,12 @@ export const GAMES: GameDef[] = [
     category: "competitive",
     accent: "#f0d56a",
     howTo: "Touchez l’écran quand l’anneau est sur la zone d’or.",
+    rules: [
+      "L’anneau se resserre vers le centre.",
+      "Touchez l’écran uniquement quand il est sur la zone d’or.",
+      "Trop tôt ou trop tard : la série s’arrête.",
+    ],
+    perks: ["Parfait pour le classement compétitif.", "Un bon timing peut viser le palier x2 en mise."],
   },
   {
     id: "memory-vault",
@@ -24,6 +36,12 @@ export const GAMES: GameDef[] = [
     category: "puzzle",
     accent: "#c9a227",
     howTo: "Retournez deux cartes identiques jusqu’à tout vider.",
+    rules: [
+      "Touchez une carte, puis une seconde.",
+      "Deux symboles identiques disparaissent.",
+      "Videz le coffre pour le meilleur score.",
+    ],
+    perks: ["Jeu calme, sans course contre la montre.", "Chaque paire fait monter couronnes et microns."],
   },
   {
     id: "orbit-dash",
@@ -32,6 +50,12 @@ export const GAMES: GameDef[] = [
     category: "action",
     accent: "#e8c547",
     howTo: "Touchez gauche / droite pour tourner. Prenez l’or, évitez les rochers.",
+    rules: [
+      "Touchez la gauche ou la droite pour changer d’orbite.",
+      "Collectez l’or en mouvement.",
+      "Un rocher = game over.",
+    ],
+    perks: ["Action rapide, scores élevés possibles.", "Bonne piste pour les mises et le Daily Cup."],
   },
   {
     id: "stack-king",
@@ -40,6 +64,12 @@ export const GAMES: GameDef[] = [
     category: "casual",
     accent: "#d4af37",
     howTo: "Touchez pour poser chaque barre le plus au centre possible.",
+    rules: [
+      "Touchez pour poser la barre en mouvement.",
+      "Plus elle est centrée, plus le combo monte.",
+      "Un décalage trop grand fait tout s’écrouler.",
+    ],
+    perks: ["Simple à prendre en main.", "Les piles longues boostent couronnes et DGH."],
   },
   {
     id: "pulse-tap",
@@ -48,6 +78,12 @@ export const GAMES: GameDef[] = [
     category: "competitive",
     accent: "#f5d76e",
     howTo: "Appuyez sur la voie quand la barre d’or passe la ligne.",
+    rules: [
+      "Les barres d’or descendent sur trois voies.",
+      "Touchez la voie au moment où la barre passe la ligne.",
+      "Un raté casse le combo.",
+    ],
+    perks: ["Rythme soutenu, combo généreux.", "Très bon pour viser 600+ pts en mise."],
   },
   {
     id: "grid-merge",
@@ -56,6 +92,12 @@ export const GAMES: GameDef[] = [
     category: "puzzle",
     accent: "#b8962e",
     howTo: "Glissez pour fusionner les mêmes nombres.",
+    rules: [
+      "Glissez dans une direction pour déplacer les tuiles.",
+      "Deux tuiles identiques fusionnent et marquent.",
+      "La partie s’arrête quand la grille est bloquée.",
+    ],
+    perks: ["Stratégie : une partie peut durer et scorer fort.", "Les fusions hautes rapportent plus de couronnes."],
   },
   {
     id: "gold-slash",
@@ -64,6 +106,12 @@ export const GAMES: GameDef[] = [
     category: "action",
     accent: "#d4af37",
     howTo: "Balayez les orbes d’or. Ne touchez pas les noirs.",
+    rules: [
+      "Balayez l’écran pour trancher les orbes d’or.",
+      "Les orbes noirs sont interdits.",
+      "Plus le combo est long, plus le score explose.",
+    ],
+    perks: ["Sensations arcade, parties courtes.", "Combo élevé = plus de microns sans mise."],
   },
   {
     id: "king-tap",
@@ -72,6 +120,12 @@ export const GAMES: GameDef[] = [
     category: "casual",
     accent: "#f0d56a",
     howTo: "Tapez le plus vite possible pendant 15 secondes.",
+    rules: [
+      "Tapez le plus vite possible pendant 15 secondes.",
+      "Chaque tap compte dans le combo.",
+      "Le chronomètre termine la partie tout seul.",
+    ],
+    perks: ["Partie ultra courte, idéal entre deux missions.", "Score brut lié à votre vitesse."],
   },
   {
     id: "maze-crown",
@@ -80,6 +134,12 @@ export const GAMES: GameDef[] = [
     category: "arcade",
     accent: "#c9a227",
     howTo: "Glissez pour bouger. Ramassez l’or avant le garde.",
+    rules: [
+      "Glissez pour déplacer le pion dans le labyrinthe.",
+      "Ramassez l’or et la couronne.",
+      "Le garde vous rattrape : partie terminée.",
+    ],
+    perks: ["Exploration + tension.", "Chaque collectible alimente score et microns."],
   },
 ];
 
@@ -160,4 +220,8 @@ export const SHOP: ShopItem[] = [
 
 export function gameById(id: string) {
   return GAMES.find((g) => g.id === id);
+}
+
+export function gameCover(id: string) {
+  return `/games/${id}.png`;
 }

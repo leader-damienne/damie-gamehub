@@ -2,7 +2,7 @@ import fs from "fs";
 import path from "path";
 import type { Pioneer, StoreShape, TournamentState } from "./types";
 import { GAMES, TOURNAMENTS } from "./catalog";
-import { MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, TOKEN, dghFromScore, dghToPi, piToDgh, roundPi, stakePayout } from "./economy";
+import { MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, TOKEN, dghToPi, freePlayDgh, piToDgh, roundDgh, roundPi, stakePayout } from "./economy";
 
 const emptyMissions = () => ({
   play3: 0,
@@ -116,7 +116,7 @@ function normalize(p: Pioneer): Pioneer {
     ...defaultPioneer(p.uid, p.username),
     ...p,
     piCredit: p.piCredit || 0,
-    damie: p.damie || 0,
+    damie: roundDgh(p.damie || 0),
     ledger: Array.isArray(p.ledger) ? p.ledger : [],
   };
 }
@@ -275,13 +275,17 @@ export function recordScore(uid: string, username: string, gameId: string, score
   p.bestScores[gameId] = Math.max(p.bestScores[gameId] || 0, finalScore);
   p.missions.play3 = Math.min(3, p.missions.play3 + 1);
   if (finalScore >= 500) p.missions.score500 = true;
-  const earned = dghFromScore(finalScore);
-  p.damie += earned;
-  note(p, "dgh", earned, `+${earned} ${TOKEN}`);
   const payout = stakePayout(finalScore, stake);
+  let earned = 0;
   if (stake > 0) {
-    p.damie += payout;
+    p.damie = roundDgh(p.damie + payout);
     note(p, payout > stake ? "win" : payout === 0 ? "lose" : "result", payout - stake, `Mise ${stake} ${TOKEN} → ${payout} ${TOKEN}`);
+  } else {
+    earned = freePlayDgh(finalScore);
+    if (earned > 0) {
+      p.damie = roundDgh(p.damie + earned);
+      note(p, "micron", earned, `Sans mise · +${earned} ${TOKEN}`);
+    }
   }
   data.pioneers[uid] = p;
   data.scores.push({ uid, username, gameId, score: finalScore, at: Date.now() });
