@@ -255,19 +255,24 @@ export default function AppShell() {
               await api("/api/payments/approve", session, { paymentId, productId });
             },
             onReadyForServerCompletion: async (paymentId, txid) => {
-              try {
-                const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
-                  "/api/payments/complete",
-                  session,
-                  { paymentId, txid },
-                );
-                if (res.pioneer) applyPioneer(res.pioneer);
-                rememberReceipt(res.paymentId || paymentId, "deposit");
-                resolve();
-              } catch (err) {
-                reject(err instanceof Error ? err : new Error("Paiement incomplet"));
-                throw err;
+              let lastErr: unknown;
+              for (let i = 0; i < 8; i += 1) {
+                try {
+                  const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
+                    "/api/payments/complete",
+                    session,
+                    { paymentId, txid },
+                  );
+                  if (res.pioneer) applyPioneer(res.pioneer);
+                  rememberReceipt(res.paymentId || paymentId, "deposit");
+                  resolve();
+                  return;
+                } catch (err) {
+                  lastErr = err;
+                  await new Promise((wait) => setTimeout(wait, 2000));
+                }
               }
+              reject(lastErr instanceof Error ? lastErr : new Error("Paiement incomplet"));
             },
             onCancel: () => reject(new Error("Paiement annulé")),
             onError: (err, payment) => {

@@ -16,8 +16,17 @@ export function explainPiError(raw: string) {
   if (text.includes("insufficient") || text.includes("not enough") || text.includes("balance")) {
     return "Solde du wallet de l’app insuffisant pour envoyer des π.";
   }
-  if (text.includes("unauthorized") || text.includes("api key") || text.includes("invalid key")) {
-    return "Clé API Pi invalide pour ce réseau (Testnet et Mainnet ont des clés différentes).";
+  if (text.includes("unauthorized") || text.includes("api key") || text.includes("invalid key") || text.includes("forbidden")) {
+    return "Clé API Pi invalide pour ce réseau. Sur damiegamehub.com il faut la clé Mainnet (pas celle du Testnet).";
+  }
+  if (text.includes("sandbox") && text.includes("network")) {
+    return "Réseau Pi incohérent : l’app Mainnet doit utiliser la clé API Mainnet.";
+  }
+  if (text.includes("migrat") || text.includes("kyc") || (text.includes("mainnet") && text.includes("wallet"))) {
+    return "Wallet Mainnet manquant. Le compte développeur doit avoir un wallet Pi Mainnet migré (KYC).";
+  }
+  if (text.includes("not verified") || text.includes("txid") || text.includes("pending")) {
+    return "Transaction Pi pas encore confirmée. Nouvelle tentative…";
   }
   if (text.includes("memo")) {
     return "Mémo de paiement Pi refusé. Réessayez.";
@@ -79,6 +88,46 @@ export async function completePayment(paymentId: string, txid: string) {
     method: "POST",
     body: JSON.stringify({ txid }),
   });
+}
+
+export async function completePaymentReliable(paymentId: string, txid?: string) {
+  let lastError: Error | null = null;
+  for (let i = 0; i < 10; i += 1) {
+    try {
+      const current = await getPayment(paymentId);
+      if (current.status.developer_completed) return current;
+      if (current.status.cancelled || current.status.user_cancelled) {
+        throw new Error("Paiement Pi annulé");
+      }
+      const useTx = txid || current.transaction?.txid;
+      if (!useTx) {
+        await sleep(1500);
+        continue;
+      }
+      await completePayment(paymentId, useTx);
+      return getPayment(paymentId);
+    } catch (error) {
+      lastError = error instanceof Error ? error : new Error("Paiement incomplet");
+      const msg = lastError.message.toLowerCase();
+      if (
+        msg.includes("annul") ||
+        msg.includes("clé api") ||
+        msg.includes("invalide") ||
+        msg.includes("wallet mainnet") ||
+        msg.includes("réseau pi")
+      ) {
+        throw lastError;
+      }
+      try {
+        const current = await getPayment(paymentId);
+        if (current.status.developer_completed) return current;
+      } catch {
+        /* keep retrying */
+      }
+      await sleep(1500);
+    }
+  }
+  throw lastError || new Error("La transaction n’est pas encore confirmée sur le Mainnet. Réessayez.");
 }
 
 export async function cancelPayment(paymentId: string) {

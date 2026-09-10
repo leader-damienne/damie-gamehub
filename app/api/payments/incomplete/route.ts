@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { bearer, readSession } from "@/lib/session";
 import { grantProduct, takePayment } from "@/lib/store";
-import { cancelPayment, completePayment, getPayment, hasApiKey } from "@/lib/pi-server";
+import { cancelPayment, completePaymentReliable, getPayment, hasApiKey } from "@/lib/pi-server";
 import { requirePiReady } from "@/lib/pi-flags";
 import { bootWallet, walletJson } from "@/lib/wallet-cookie";
+import { roundPi } from "@/lib/economy";
 
 export const dynamic = "force-dynamic";
 
@@ -40,12 +41,18 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Paiement Pi encore en cours. Réessayez dans un instant." }, { status: 409 });
     }
     if (!payment.status.developer_completed) {
-      await completePayment(paymentId, txid);
+      await completePaymentReliable(paymentId, txid);
     }
     const pending = await takePayment(paymentId);
-    const productId = String(payment.metadata?.productId || pending?.productId || "");
-    if (payment.metadata?.type === "withdraw" || !productId || productId === "unknown") {
-      return walletJson({ ok: true, pioneer: null }, session.uid);
+    let productId = String(payment.metadata?.productId || pending?.productId || "");
+    if (payment.metadata?.type === "withdraw") {
+      return walletJson({ ok: true, pioneer: null, paymentId }, session.uid);
+    }
+    if (!productId.startsWith("deposit:")) {
+      const amount = roundPi(Number(payment.amount) || 0);
+      if (amount > 0) productId = `deposit:${amount}`;
+    } else {
+      productId = `deposit:${roundPi(Number(payment.amount) || 0)}`;
     }
     const pioneer = await grantProduct(session.uid, productId, session.username, paymentId);
     return walletJson({ ok: true, pioneer, paymentId }, session.uid);

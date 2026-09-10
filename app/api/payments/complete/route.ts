@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server";
 import { bearer, readSession } from "@/lib/session";
 import { grantProduct, takePayment } from "@/lib/store";
-import { completePayment, getPayment, hasApiKey } from "@/lib/pi-server";
+import { completePaymentReliable, getPayment, hasApiKey } from "@/lib/pi-server";
 import { requirePiReady } from "@/lib/pi-flags";
 import { bootWallet, walletJson } from "@/lib/wallet-cookie";
+import { roundPi } from "@/lib/economy";
 
 export const dynamic = "force-dynamic";
 
@@ -21,27 +22,18 @@ export async function POST(req: Request) {
   }
   try {
     await bootWallet(req, session.uid);
-    const payment = await getPayment(body.paymentId);
+    const finished = await completePaymentReliable(body.paymentId, body.txid);
+    const payment = await getPayment(body.paymentId).catch(() => finished);
     if (payment.user_uid && payment.user_uid !== session.uid) {
       return NextResponse.json({ error: "Paiement Pi d’un autre Pioneer" }, { status: 403 });
     }
-    if (payment.status.cancelled || payment.status.user_cancelled) {
-      return NextResponse.json({ error: "Paiement Pi annulé" }, { status: 400 });
-    }
-    if (!payment.status.developer_completed) {
-      await completePayment(body.paymentId, body.txid);
-    }
     const pending = await takePayment(body.paymentId);
-    const productId = String(payment.metadata?.productId || pending?.productId || "");
-    if (productId.startsWith("deposit:")) {
-      const expected = Number(productId.slice("deposit:".length));
-      if (!Number.isFinite(expected) || Math.abs(Number(payment.amount) - expected) > 0.0001) {
-        return NextResponse.json({ error: "Montant de dépôt incohérent" }, { status: 400 });
-      }
+    if (payment.metadata?.type === "withdraw") {
+      return walletJson({ ok: true, pioneer: null, paymentId: body.paymentId }, session.uid);
     }
-    if (!productId || productId === "unknown") {
-      return NextResponse.json({ error: "Produit de paiement inconnu" }, { status: 400 });
-    }
+    const amount = roundPi(Number(payment.amount) || 0);
+    const metaId = String(payment.metadata?.productId || pending?.productId || "");
+    const productId = metaId.startsWith("deposit:") || amount <= 0 ? metaId || `deposit:${amount}` : `deposit:${amount}`;
     const pioneer = await grantProduct(session.uid, productId, session.username, body.paymentId);
     return walletJson({ ok: true, pioneer, paymentId: body.paymentId }, session.uid);
   } catch (error) {
