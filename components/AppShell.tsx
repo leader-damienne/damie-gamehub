@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, piToDgh } from "@/lib/economy";
-import { api, hasPiSdk, initPi } from "@/lib/pi-client";
+import { api, hasPiSdk, initPi, startPiAuth } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
@@ -92,23 +92,6 @@ export default function AppShell() {
         }
       } catch {
         /* ignore */
-      }
-      try {
-        await initPi();
-        if (!sessionStorage.getItem("damie.incompleteChecked")) {
-          sessionStorage.setItem("damie.incompleteChecked", "1");
-          void window.Pi!.authenticate(["username", "payments"], (payment) => {
-            void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", token, {
-              paymentId: payment.identifier,
-              txid: payment.transaction?.txid,
-            }).then((res) => {
-              if (res.pioneer) applyPioneer(res.pioneer);
-              rememberReceipt(payment.identifier, "deposit");
-            });
-          });
-        }
-      } catch {
-        /* already connected */
       }
       try {
         const live = await api<{ pioneer?: Pioneer }>("/api/profile", token);
@@ -203,6 +186,21 @@ export default function AppShell() {
     setError("");
     try {
       await initPi();
+      const pendingIncomplete: Promise<void>[] = [];
+      await startPiAuth((payment) => {
+        pendingIncomplete.push(
+          api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
+            paymentId: payment.identifier,
+            txid: payment.transaction?.txid,
+          })
+            .then((res) => {
+              if (res.pioneer) applyPioneer(res.pioneer);
+              rememberReceipt(payment.identifier, "deposit");
+            })
+            .then(() => undefined),
+        );
+      }, ["username", "payments"]);
+      await Promise.all(pendingIncomplete);
       await new Promise<void>((resolve, reject) => {
         window.Pi!.createPayment(
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
@@ -235,6 +233,15 @@ export default function AppShell() {
                   if (res.pioneer) applyPioneer(res.pioneer);
                 });
               }
+              const raw = err instanceof Error ? err.message : String(err || "");
+              if (/payments["']?\s*scope/i.test(raw)) {
+                reject(
+                  new Error(
+                    "Pi n’a pas autorisé les paiements. Touchez Autoriser, puis choisissez à nouveau 0,10 π jusqu’à 5 π.",
+                  ),
+                );
+                return;
+              }
               reject(err instanceof Error ? err : new Error("Paiement Pi refusé"));
             },
           },
@@ -242,7 +249,12 @@ export default function AppShell() {
       });
       return true;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Paiement impossible");
+      const raw = err instanceof Error ? err.message : "Paiement impossible";
+      setError(
+        /payments["']?\s*scope/i.test(raw)
+          ? "Pi n’a pas autorisé les paiements. Touchez Autoriser, puis le montant voulu (0,10 à 5 π)."
+          : raw,
+      );
       return false;
     } finally {
       setBusy(false);
