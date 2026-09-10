@@ -92,7 +92,7 @@ export function persistReady() {
 
 export function persistHint() {
   if (persistReady()) return "Soldes enregistrés dans Cloudflare KV.";
-  return "Ajoutez CF_ACCOUNT_ID, CF_KV_NAMESPACE_ID et CF_API_TOKEN dans Settings du Worker (comme PI_API_KEY).";
+  return "Attendez la fin du build Cloudflare. Le KV DAMIE_KV est lié via wrangler.jsonc.";
 }
 
 async function cfKvUrl(key: string) {
