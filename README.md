@@ -10,12 +10,18 @@ npm run dev
 
 Local : http://localhost:3314
 
-Pour le **Mainnet** (Pi Browser), déployer en HTTPS et mettre :
+## Réseaux Pi
 
-```
-PI_API_KEY=clé_du_portail
-NEXT_PUBLIC_PI_SANDBOX=false
-```
+Deux URLs, deux clés API (develop.pinet.com) :
+
+| URL | Réseau | Variable Cloudflare |
+| --- | --- | --- |
+| https://damiegamehub.elisabethadilehou571.workers.dev | Testnet | `PI_API_KEY` |
+| https://damiegamehub.com | Mainnet | `PI_API_KEY_MAINNET` |
+
+`PI_API_KEY` seule (clé Testnet) ne peut pas approuver un dépôt Mainnet. Sans `PI_API_KEY_MAINNET`, le dernier point de la checklist Pi (transaction U2A) reste bloqué.
+
+Dans develop.pinet.com, le wallet de l’app ne doit pas rester sur **None**. Le compte développeur doit être KYC avec un wallet Mainnet migré.
 
 Sur Cloudflare Workers, les soldes doivent survivre entre les requêtes. Ajoutez un KV (ou Upstash) :
 
@@ -24,5 +30,3 @@ CF_ACCOUNT_ID=
 CF_KV_NAMESPACE_ID=
 CF_API_TOKEN=
 ```
-
-Le wallet de l’app dans develop.pinet.com ne doit pas rester sur **None**, sinon les retraits A2U échouent.

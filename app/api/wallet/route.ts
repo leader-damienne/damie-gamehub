@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { bearer, readSession } from "@/lib/session";
 import { buyWithCredit, convertDamie, convertPiToDamie, refundWithdraw, stakeDamie, withdrawPi } from "@/lib/store";
-import { drainIncompleteA2U, finishA2UPayment, hasApiKey, sendA2UPayment } from "@/lib/pi-server";
+import { hasApiKey, withPiRequest } from "@/lib/pi-server";
 import { requirePiReady } from "@/lib/pi-flags";
 import { SHOP } from "@/lib/catalog";
 import { bootWallet, walletJson } from "@/lib/wallet-cookie";
@@ -9,6 +9,7 @@ import { bootWallet, walletJson } from "@/lib/wallet-cookie";
 export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
+  return withPiRequest(req, async (pi) => {
   const session = readSession(bearer(req));
   if (!session) return NextResponse.json({ error: "Session invalide" }, { status: 401 });
   const body = (await req.json()) as {
@@ -46,11 +47,11 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "withdraw-status") {
-    const blocked = requirePiReady();
+    const blocked = requirePiReady(req);
     if (blocked) return NextResponse.json({ error: blocked }, { status: 503 });
     if (!body.paymentId) return NextResponse.json({ error: "paymentId requis" }, { status: 400 });
     try {
-      const result = await finishA2UPayment(body.paymentId);
+      const result = await pi.finishA2UPayment(body.paymentId);
       return NextResponse.json({ ok: true, pendingWithdraw: !result.done, paymentId: body.paymentId });
     } catch (error) {
       return NextResponse.json(
@@ -61,13 +62,13 @@ export async function POST(req: Request) {
   }
 
   if (body.action === "withdraw") {
-    const blocked = requirePiReady();
+    const blocked = requirePiReady(req);
     if (blocked) return NextResponse.json({ error: blocked }, { status: 503 });
-    if (!hasApiKey()) {
+    if (!hasApiKey(req)) {
       return NextResponse.json({ error: "Clé API Pi manquante. Impossible d’envoyer des π." }, { status: 503 });
     }
     try {
-      await drainIncompleteA2U();
+      await pi.drainIncompleteA2U();
     } catch {
       /* still attempt a new A2U */
     }
@@ -75,7 +76,7 @@ export async function POST(req: Request) {
     if (!prepared.ok) return NextResponse.json(prepared, { status: 400 });
     try {
       const memo = `WD ${prepared.amount} Pi`.slice(0, 24);
-      const sent = await sendA2UPayment(session.uid, prepared.amount, memo);
+      const sent = await pi.sendA2UPayment(session.uid, prepared.amount, memo);
       return walletJson(
         {
           ok: true,
@@ -96,4 +97,5 @@ export async function POST(req: Request) {
   }
 
   return NextResponse.json({ error: "Action inconnue" }, { status: 400 });
+  });
 }

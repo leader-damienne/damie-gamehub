@@ -633,6 +633,8 @@ export default function AppShell() {
               </button>
             </div>
           )}
+
+          {view === "lobby" && (
             <>
               <div className="hero">
                 <div className="hero-row">

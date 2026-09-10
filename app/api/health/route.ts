@@ -2,23 +2,27 @@ import { NextResponse } from "next/server";
 import { APP_NAME } from "@/lib/site";
 import { persistBackend, persistReady } from "@/lib/durable-store";
 import { hasApiKey } from "@/lib/pi-server";
+import { isMainnetHost, requestHost } from "@/lib/pi-host";
 
 export const dynamic = "force-dynamic";
 
 export function GET(req: Request) {
-  const host = new URL(req.url).hostname.replace(/^www\./, "");
-  const mainnetHost = host === "damiegamehub.com";
+  const host = requestHost(req);
+  const mainnet = isMainnetHost(host);
+  const hasDedicatedMainnet = Boolean(process.env.PI_API_KEY_MAINNET);
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
     host,
-    network: mainnetHost ? "mainnet" : "sandbox",
-    envSandbox: process.env.NEXT_PUBLIC_PI_SANDBOX !== "false",
-    paymentsReady: hasApiKey(),
+    network: mainnet ? "mainnet" : "sandbox",
+    paymentsReady: hasApiKey(req),
+    hasMainnetApiKey: hasDedicatedMainnet,
     persist: persistBackend(),
     persistReady: persistReady(),
-    hint: mainnetHost
-      ? "Mainnet : PI_API_KEY doit être la clé du projet Mainnet, NEXT_PUBLIC_PI_SANDBOX=false, wallet développeur KYC migré."
-      : "Testnet / sandbox.",
+    hint: mainnet && !hasDedicatedMainnet
+      ? "Ajoutez PI_API_KEY_MAINNET dans Cloudflare (clé du projet Mainnet). PI_API_KEY seule est souvent celle du Testnet."
+      : mainnet
+        ? "Mainnet prêt. Déposez un petit montant depuis https://damiegamehub.com"
+        : "Testnet / sandbox.",
   });
 }

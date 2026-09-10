@@ -28,6 +28,7 @@ export function persistBackend(): PersistBackend {
   if (cfAccount() && cfNamespace() && cfToken()) return "cloudflare-kv";
   if (upstashUrl() && upstashToken()) return "upstash";
   if (process.env.VERCEL || process.env.CF_PAGES || process.env.CLOUDFLARE) return "memory";
+  if (typeof (globalThis as { WebSocketPair?: unknown }).WebSocketPair !== "undefined") return "memory";
   return "file";
 }
 
