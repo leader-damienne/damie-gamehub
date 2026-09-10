@@ -5,6 +5,8 @@ export const STAKES = [0, 5, 10, 25, 50];
 export const MIN_WITHDRAW = 0.1;
 export const MIN_CONVERT = 100;
 export const MIN_SWAP_PI = 0.1;
+export const MIN_DEPOSIT = 0.01;
+export const MAX_DEPOSIT = 10000;
 
 /** 1 micron = 0,01 DGH. Les parties sans mise en rapportent selon le score. */
 export const MICRON = 0.01;
@@ -37,6 +39,18 @@ export function piToDgh(pi: number) {
 
 export function dghToPi(amount: number) {
   return roundPi(Math.floor(amount) / DGH_PER_PI);
+}
+
+export function parsePiInput(text: string) {
+  const n = Number(String(text).trim().replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return roundPi(n);
+}
+
+export function parseDghInput(text: string) {
+  const n = Number(String(text).trim().replace(",", "."));
+  if (!Number.isFinite(n)) return null;
+  return Math.floor(n);
 }
 
 export function stakePayout(score: number, stake: number) {

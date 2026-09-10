@@ -91,12 +91,28 @@ export function startPiAuth(
   });
 }
 
-export async function authenticatePi(
-  onIncomplete?: (payment: PiPaymentDTO) => void,
-  scopes: PiScope[] = ["username", "payments"],
-) {
-  await initPi();
-  return startPiAuth(onIncomplete, scopes);
+let paymentsAuth: Promise<PiAuthResult> | null = null;
+let incompleteHandler: ((payment: PiPaymentDTO) => void) | undefined;
+
+export function clearPaymentsAuth() {
+  paymentsAuth = null;
+}
+
+/** Authenticate once per hub visit. Pi cannot keep the payments scope after a page reload. */
+export function ensurePaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => void) {
+  if (onIncomplete) incompleteHandler = onIncomplete;
+  if (!hasPiSdk()) {
+    return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
+  }
+  if (!paymentsAuth) {
+    paymentsAuth = startPiAuth((payment) => incompleteHandler?.(payment), ["username", "payments"]).catch(
+      (err) => {
+        paymentsAuth = null;
+        throw err;
+      },
+    );
+  }
+  return paymentsAuth;
 }
 
 export async function api<T>(path: string, session: string | null, body?: unknown, method = "POST") {

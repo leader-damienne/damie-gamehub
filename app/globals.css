@@ -372,6 +372,29 @@ img {
   box-shadow: 0 8px 20px rgba(201, 162, 39, 0.28);
 }
 
+.amount-row {
+  display: flex;
+  gap: 8px;
+  align-items: stretch;
+  margin-top: 10px;
+}
+
+.amount-row input {
+  flex: 1;
+  min-width: 0;
+  border-radius: 12px;
+  border: 1px solid rgba(212, 175, 55, 0.28);
+  background: #111;
+  color: #f5e6a3;
+  padding: 12px;
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.amount-row input:focus {
+  outline: 1px solid rgba(212, 175, 55, 0.55);
+}
+
 .gold-btn:disabled,
 .play-btn:disabled {
   opacity: 0.55;

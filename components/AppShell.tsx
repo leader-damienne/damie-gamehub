@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
-import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, piToDgh } from "@/lib/economy";
-import { api, hasPiSdk, initPi, startPiAuth } from "@/lib/pi-client";
+import { MAX_DEPOSIT, MIN_CONVERT, MIN_DEPOSIT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, parseDghInput, parsePiInput, piToDgh } from "@/lib/economy";
+import { api, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
@@ -36,6 +36,9 @@ export default function AppShell() {
   const [stakePick, setStakePick] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, { plays: number; players: number }>>({});
   const [boot, setBoot] = useState(false);
+  const [depositInput, setDepositInput] = useState("");
+  const [swapInput, setSwapInput] = useState("");
+  const [convertInput, setConvertInput] = useState("");
 
   const games = useMemo(
     () => GAMES.filter((g) => category === "all" || g.category === category),
@@ -184,24 +187,17 @@ export default function AppShell() {
     }
     setBusy(true);
     setError("");
-    try {
-      await initPi();
-      const pendingIncomplete: Promise<void>[] = [];
-      await startPiAuth((payment) => {
-        pendingIncomplete.push(
-          api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
-            paymentId: payment.identifier,
-            txid: payment.transaction?.txid,
-          })
-            .then((res) => {
-              if (res.pioneer) applyPioneer(res.pioneer);
-              rememberReceipt(payment.identifier, "deposit");
-            })
-            .then(() => undefined),
-        );
-      }, ["username", "payments"]);
-      await Promise.all(pendingIncomplete);
-      await new Promise<void>((resolve, reject) => {
+    const onIncomplete = (payment: PiPaymentDTO) => {
+      void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
+        paymentId: payment.identifier,
+        txid: payment.transaction?.txid,
+      }).then((res) => {
+        if (res.pioneer) applyPioneer(res.pioneer);
+        rememberReceipt(payment.identifier, "deposit");
+      });
+    };
+    const createOnce = () =>
+      new Promise<void>((resolve, reject) => {
         window.Pi!.createPayment(
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
           {
@@ -225,40 +221,96 @@ export default function AppShell() {
             },
             onCancel: () => reject(new Error("Paiement annulé")),
             onError: (err, payment) => {
-              if (payment?.identifier) {
-                void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
-                  paymentId: payment.identifier,
-                  txid: payment.transaction?.txid,
-                }).then((res) => {
-                  if (res.pioneer) applyPioneer(res.pioneer);
-                });
-              }
-              const raw = err instanceof Error ? err.message : String(err || "");
-              if (/payments["']?\s*scope/i.test(raw)) {
-                reject(
-                  new Error(
-                    "Pi n’a pas autorisé les paiements. Touchez Autoriser, puis choisissez à nouveau 0,10 π jusqu’à 5 π.",
-                  ),
-                );
-                return;
-              }
+              if (payment?.identifier) onIncomplete(payment);
               reject(err instanceof Error ? err : new Error("Paiement Pi refusé"));
             },
           },
         );
       });
+    try {
+      await initPi();
+      await ensurePaymentsAuth(onIncomplete);
+      try {
+        await createOnce();
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : String(err || "");
+        if (!/payments["']?\s*scope/i.test(raw)) throw err;
+        clearPaymentsAuth();
+        await ensurePaymentsAuth(onIncomplete);
+        await createOnce();
+      }
       return true;
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Paiement impossible";
       setError(
         /payments["']?\s*scope/i.test(raw)
-          ? "Pi n’a pas autorisé les paiements. Touchez Autoriser, puis le montant voulu (0,10 à 5 π)."
+          ? "Pi demande Autoriser une fois par visite. Validez, puis saisissez votre montant."
           : raw,
       );
       return false;
     } finally {
       setBusy(false);
     }
+  }
+
+  function openWallet() {
+    setView("wallet");
+    if (!session || !hasPiSdk()) return;
+    void initPi()
+      .then(() =>
+        ensurePaymentsAuth((payment) => {
+          void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
+            paymentId: payment.identifier,
+            txid: payment.transaction?.txid,
+          }).then((res) => {
+            if (res.pioneer) applyPioneer(res.pioneer);
+            rememberReceipt(payment.identifier, "deposit");
+          });
+        }),
+      )
+      .catch(() => undefined);
+  }
+
+  async function submitDeposit() {
+    const amount = parsePiInput(depositInput);
+    if (amount === null || amount < MIN_DEPOSIT) {
+      setError(`Indiquez un dépôt d’au moins ${MIN_DEPOSIT} π.`);
+      return;
+    }
+    if (amount > MAX_DEPOSIT) {
+      setError(`Dépôt maximum ${MAX_DEPOSIT} π.`);
+      return;
+    }
+    const ok = await pay(`deposit:${amount}`, amount, `Dep ${amount} Pi`.slice(0, 24));
+    if (ok) setDepositInput("");
+  }
+
+  async function submitSwapIn() {
+    const amount = parsePiInput(swapInput);
+    if (amount === null || amount < MIN_SWAP_PI) {
+      setError(`Indiquez au moins ${MIN_SWAP_PI} π à échanger.`);
+      return;
+    }
+    if (!pioneer || amount > pioneer.piCredit) {
+      setError("Solde π insuffisant pour cet échange.");
+      return;
+    }
+    await walletCall("swap-in", { amount });
+    setSwapInput("");
+  }
+
+  async function submitConvert() {
+    const amount = parseDghInput(convertInput);
+    if (amount === null || amount < MIN_CONVERT) {
+      setError(`Indiquez au moins ${MIN_CONVERT} ${TOKEN} à échanger.`);
+      return;
+    }
+    if (!pioneer || amount > pioneer.damie) {
+      setError(`${TOKEN} insuffisants pour cet échange.`);
+      return;
+    }
+    await walletCall("convert", { amount });
+    setConvertInput("");
   }
 
   async function watchAd() {
@@ -467,7 +519,7 @@ export default function AppShell() {
                   <span>{pioneer.username}</span>
                 </div>
               </div>
-              <div className="pill" onClick={() => setView("wallet")} style={{ cursor: "pointer" }}>
+              <div className="pill" onClick={openWallet} style={{ cursor: "pointer" }}>
                 {Number(pioneer?.piCredit || 0).toFixed(2)} π · {formatDgh(pioneer?.damie ?? 0)} {TOKEN}
               </div>
             </div>
@@ -644,20 +696,24 @@ export default function AppShell() {
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Déposer des π</h4>
                 <p>
-                  Les π arrivent sur votre solde π. Ils ne sont pas utilisables en jeu tant que vous
-                  ne les échangez pas en {TOKEN}.
+                  Saisissez le montant à envoyer depuis votre wallet Pi. Minimum {MIN_DEPOSIT} π.
+                  L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
                 </p>
-                <div className="row" style={{ flexWrap: "wrap" }}>
-                  {DEPOSITS.map((amount) => (
-                    <button
-                      key={amount}
-                      className="gold-btn"
-                      disabled={busy}
-                      onClick={() => pay(`deposit:${amount}`, amount, `Dep ${amount} Pi`)}
-                    >
-                      +{amount} π
-                    </button>
-                  ))}
+                <div className="amount-row">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder="Montant en π"
+                    value={depositInput}
+                    disabled={busy}
+                    onChange={(e) => setDepositInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void submitDeposit();
+                    }}
+                  />
+                  <button className="gold-btn" disabled={busy} onClick={() => void submitDeposit()}>
+                    Déposer
+                  </button>
                 </div>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
@@ -666,25 +722,34 @@ export default function AppShell() {
                   Seuls les {TOKEN} servent aux mises, à la boutique et aux tournois. Minimum{" "}
                   {MIN_SWAP_PI} π.
                 </p>
-                <div className="row" style={{ flexWrap: "wrap" }}>
-                  {DEPOSITS.filter((amount) => (pioneer.piCredit || 0) >= amount).map((amount) => (
-                    <button
-                      key={amount}
-                      className="gold-btn"
-                      disabled={busy}
-                      onClick={() => walletCall("swap-in", { amount })}
-                    >
-                      {amount} π → {piToDgh(amount)} {TOKEN}
-                    </button>
-                  ))}
+                <div className="amount-row">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} π`}
+                    value={swapInput}
+                    disabled={busy}
+                    onChange={(e) => setSwapInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void submitSwapIn();
+                    }}
+                  />
                   <button
-                    className="ghost-btn"
+                    className="gold-btn"
                     disabled={busy || (pioneer.piCredit || 0) < MIN_SWAP_PI}
-                    onClick={() => walletCall("swap-in", { amount: pioneer.piCredit })}
+                    onClick={() => void submitSwapIn()}
                   >
-                    Tout échanger ({Number(pioneer.piCredit || 0).toFixed(2)} π)
+                    Échanger
                   </button>
                 </div>
+                <button
+                  className="ghost-btn"
+                  style={{ marginTop: 8, width: "100%" }}
+                  disabled={busy || (pioneer.piCredit || 0) < MIN_SWAP_PI}
+                  onClick={() => walletCall("swap-in", { amount: pioneer.piCredit })}
+                >
+                  Tout échanger ({Number(pioneer.piCredit || 0).toFixed(2)} π → {piToDgh(pioneer.piCredit || 0)} {TOKEN})
+                </button>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Échanger {TOKEN} → π</h4>
@@ -692,17 +757,26 @@ export default function AppShell() {
                   Pour retirer vos gains, reconvertissez d’abord vos {TOKEN} en π (min. {MIN_CONVERT}{" "}
                   {TOKEN}).
                 </p>
-                <button
-                  className="gold-btn"
-                  disabled={busy || (pioneer.damie || 0) < MIN_CONVERT}
-                  onClick={() =>
-                    walletCall("convert", {
-                      amount: Math.floor((pioneer.damie || 0) / MIN_CONVERT) * MIN_CONVERT,
-                    })
-                  }
-                >
-                  Échanger {Math.floor((pioneer.damie || 0) / MIN_CONVERT) * MIN_CONVERT} {TOKEN}
-                </button>
+                <div className="amount-row">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder={`Max ${Math.floor(pioneer.damie || 0)} ${TOKEN}`}
+                    value={convertInput}
+                    disabled={busy}
+                    onChange={(e) => setConvertInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void submitConvert();
+                    }}
+                  />
+                  <button
+                    className="gold-btn"
+                    disabled={busy || (pioneer.damie || 0) < MIN_CONVERT}
+                    onClick={() => void submitConvert()}
+                  >
+                    Échanger
+                  </button>
+                </div>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Retirer vers le wallet Pi</h4>
@@ -859,7 +933,7 @@ export default function AppShell() {
             <NavBtn label="Lobby" on={view === "lobby"} icon="grid" onClick={() => setView("lobby")} />
             <NavBtn label="Coupes" on={view === "tournaments"} icon="cup" onClick={() => setView("tournaments")} />
             <NavBtn label="Top" on={view === "rankings"} icon="rank" onClick={() => setView("rankings")} />
-            <NavBtn label="Solde" on={view === "wallet"} icon="bag" onClick={() => setView("wallet")} />
+            <NavBtn label="Solde" on={view === "wallet"} icon="bag" onClick={openWallet} />
             <NavBtn label="Profil" on={view === "profile"} icon="user" onClick={() => setView("profile")} />
           </nav>
         )}
