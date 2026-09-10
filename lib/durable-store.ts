@@ -1,5 +1,8 @@
 import type { StoreShape } from "./types";
 
+// KV REST uses the damie-gamehub namespace. Do not add an OpenNext wrangler.jsonc:
+// this Worker deploys with `npm run build` then `npx wrangler deploy`.
+
 const STORE_KEY = "damie-store";
 
 export type PersistBackend = "cloudflare-kv" | "upstash" | "file" | "memory";
