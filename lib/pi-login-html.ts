@@ -10,6 +10,7 @@ export function piLoginHtml() {
     html,body{margin:0;background:#fff;color:#111;font-family:Segoe UI,sans-serif}
     .splash{min-height:100dvh;padding:24px 20px 28px;display:flex;flex-direction:column;align-items:center;text-align:center;box-sizing:border-box}
     .pill{display:inline-flex;padding:7px 10px;border-radius:999px;background:rgba(212,175,55,.12);border:1px solid rgba(212,175,55,.22);color:#8a6a1a;font-size:12px;font-weight:700}
+    .brand{margin:8px 0 4px;font-weight:800;letter-spacing:.04em;font-size:22px}
     img{width:120px;height:120px;object-fit:contain;margin:16px 0 8px}
     p{color:#5c5648;line-height:1.45;font-size:14px;max-width:320px;margin:0 0 16px}
     #pi-error{display:none;width:100%;max-width:320px;background:rgba(211,106,106,.12);color:#8a2f2f;border:1px solid rgba(211,106,106,.28);padding:10px 12px;border-radius:12px;font-size:13px;margin:0 0 12px;box-sizing:border-box;white-space:pre-wrap;word-break:break-all}
@@ -19,8 +20,8 @@ export function piLoginHtml() {
 </head>
 <body>
   <div class="splash">
-    <div class="pill">GAME HUB</div>
     <img src="/logo-1024.png" alt="Damie GameHub" />
+    <div class="brand" translate="no">Damie GameHub</div>
     <p>10 jeux instantanés, tournois, classements et boutique. Connexion et paiements uniquement avec Pi.</p>
     <div id="pi-error"></div>
     <button type="button" id="pi-enter" onclick="window.__piLogin&&window.__piLogin()">Entrer avec Pi</button>

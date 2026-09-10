@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
 import { DEPOSITS, MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, piToDgh } from "@/lib/economy";
 import { api, hasPiSdk, initPi } from "@/lib/pi-client";
+import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
 import GameBrief from "@/components/GameBrief";
@@ -285,7 +286,9 @@ export default function AppShell() {
       <div className="app-root">
         <div className="phone">
           <div className="splash">
-            <div className="pill">GAME HUB</div>
+            <div className="brand-lock" translate="no">
+              {APP_NAME}
+            </div>
             <p>{error || "Ouverture du lobby…"}</p>
             {error && (
               <a className="gold-btn" href="/">
@@ -339,10 +342,12 @@ export default function AppShell() {
           {view !== "privacy" && (
             <div className="topbar">
               <div className="brand-mini">
-                <img src="/logo.png" alt="Damie GameHub" />
+                <img src="/logo.png" alt={APP_NAME} />
                 <div>
-                  <strong>{pioneer.username}</strong>
-                  <span>Pioneer</span>
+                  <strong className="brand-lock" translate="no">
+                    {APP_NAME}
+                  </strong>
+                  <span>{pioneer.username}</span>
                 </div>
               </div>
               <div className="pill" onClick={() => setView("wallet")} style={{ cursor: "pointer" }}>
@@ -358,11 +363,13 @@ export default function AppShell() {
               <div className="hero">
                 <div className="hero-row">
                   <div className="hero-copy">
-                    <div className="pill">Saison Couronne</div>
+                    <div className="pill brand-lock" translate="no">
+                      {APP_NAME}
+                    </div>
                     <p className="hello">Bienvenue</p>
                     <h2>{pioneer.username}</h2>
                   </div>
-                  <img className="hero-logo" src="/logo.png" alt="Damie GameHub" />
+                  <img className="hero-logo" src="/logo.png" alt={APP_NAME} />
                 </div>
                 <p className="hero-lead">
                   Déposez des π, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en π pour retirer.
@@ -529,7 +536,7 @@ export default function AppShell() {
                       key={amount}
                       className="gold-btn"
                       disabled={busy}
-                      onClick={() => pay(`deposit:${amount}`, amount, `Dépôt ${amount} π Damie GameHub`)}
+                      onClick={() => pay(`deposit:${amount}`, amount, `Dépôt ${amount} π ${APP_NAME}`)}
                     >
                       +{amount} π
                     </button>
@@ -693,8 +700,8 @@ export default function AppShell() {
                     className="gold-btn"
                     onClick={() =>
                       window.Pi?.openShareDialog?.(
-                        "Damie GameHub",
-                        `Je joue sur Damie GameHub — score ${pioneer.crownScore} couronnes.`,
+                        APP_NAME,
+                        `Je joue sur ${APP_NAME} — score ${pioneer.crownScore} couronnes.`,
                       )
                     }
                   >

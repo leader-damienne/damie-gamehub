@@ -1,10 +1,14 @@
+import { APP_NAME } from "@/lib/site";
+
 export default function HomePage() {
   return (
     <div className="app-root">
       <div className="phone">
         <div className="splash">
-          <div className="pill">GAME HUB</div>
-          <img src="/logo-1024.png" alt="Damie GameHub" />
+          <img src="/logo-1024.png" alt={APP_NAME} />
+          <div className="brand-lock" translate="no">
+            {APP_NAME}
+          </div>
           <p>
             10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
             uniquement avec Pi.

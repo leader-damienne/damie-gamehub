@@ -1,6 +1,6 @@
 {
   "name": "Damie GameHub",
-  "short_name": "Damie",
+  "short_name": "Damie GameHub",
   "description": "Hub de jeux HTML5 pour Pioneers — tournois, classements et Pi.",
   "start_url": "/",
   "display": "standalone",

@@ -1,7 +1,7 @@
 import { Outfit } from "next/font/google";
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
-import { APP_URL } from "@/lib/site";
+import { APP_NAME, APP_URL } from "@/lib/site";
 
 const outfit = Outfit({
   subsets: ["latin"],
@@ -10,10 +10,10 @@ const outfit = Outfit({
 
 export const metadata: Metadata = {
   metadataBase: new URL(APP_URL),
-  title: "Damie GameHub",
+  title: APP_NAME,
   description:
     "Hub de jeux HTML5 pour Pioneers : lobby, tournois, classements et paiements en Pi.",
-  applicationName: "Damie GameHub",
+  applicationName: APP_NAME,
   manifest: "/manifest.json",
   icons: {
     icon: [

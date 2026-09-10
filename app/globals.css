@@ -112,6 +112,12 @@ img {
   letter-spacing: 0.02em;
 }
 
+.brand-lock {
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  white-space: nowrap;
+}
+
 .brand-mini span {
   color: var(--muted);
   font-size: 11px;
@@ -449,6 +455,12 @@ img {
   line-height: 1.5;
   font-size: 14px;
   max-width: 340px;
+}
+
+.splash .brand-lock {
+  margin: 4px 0 14px;
+  font-size: 22px;
+  color: #111;
 }
 
 .splash .pi-enter-wrap {
