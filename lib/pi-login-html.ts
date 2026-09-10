@@ -57,7 +57,14 @@ export function piLoginHtml() {
         }
         btn.textContent = "Autorisez dans Pi…";
         hint.textContent = "Touchez Autoriser.";
-        window.Pi.authenticate(["username", "payments"], function () {})
+        window.Pi.authenticate(["username", "payments"], function (payment) {
+          try {
+            sessionStorage.setItem("damie.incompletePayment", JSON.stringify({
+              paymentId: payment && payment.identifier,
+              txid: payment && payment.transaction && payment.transaction.txid
+            }));
+          } catch (e) {}
+        })
           .then(function (auth) {
             if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
             sessionStorage.setItem("damie.piToken", auth.accessToken);

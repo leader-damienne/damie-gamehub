@@ -4,9 +4,7 @@ export function isMainnet() {
 
 export function requirePiReady() {
   if (!process.env.PI_API_KEY) {
-    return isMainnet()
-      ? "Clé API Pi manquante pour le Mainnet"
-      : null;
+    return "Clé API Pi manquante. Ajoutez PI_API_KEY dans Cloudflare (Testnet et Mainnet ont des clés différentes).";
   }
   return null;
 }

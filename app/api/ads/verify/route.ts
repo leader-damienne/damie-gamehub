@@ -3,12 +3,16 @@ import { bearer, readSession } from "@/lib/session";
 import { markAd } from "@/lib/store";
 import { hasApiKey, verifyRewardedAd } from "@/lib/pi-server";
 import { requirePiReady } from "@/lib/pi-flags";
+import { bootWallet, walletJson } from "@/lib/wallet-cookie";
+
+export const dynamic = "force-dynamic";
 
 export async function POST(req: Request) {
   const session = readSession(bearer(req));
   if (!session) return NextResponse.json({ error: "Session invalide" }, { status: 401 });
   const blocked = requirePiReady();
   if (blocked) return NextResponse.json({ error: blocked }, { status: 503 });
+  await bootWallet(req, session.uid);
   const body = (await req.json()) as { adId?: string };
   if (hasApiKey()) {
     if (!body.adId) {
@@ -21,6 +25,6 @@ export async function POST(req: Request) {
   } else if (!body.adId) {
     return NextResponse.json({ error: "Pub Pi requise" }, { status: 400 });
   }
-  const pioneer = markAd(session.uid);
-  return NextResponse.json({ ok: true, pioneer });
+  const pioneer = await markAd(session.uid);
+  return walletJson({ ok: true, pioneer }, session.uid);
 }

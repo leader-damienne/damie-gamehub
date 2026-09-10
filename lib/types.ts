@@ -100,4 +100,5 @@ export type StoreShape = {
   scores: ScoreEntry[];
   tournaments: Record<string, TournamentState>;
   pendingPayments: Record<string, { uid: string; productId: string }>;
+  creditedPayments: Record<string, string>;
 };

@@ -16,3 +16,13 @@ Pour le **Mainnet** (Pi Browser), déployer en HTTPS et mettre :
 PI_API_KEY=clé_du_portail
 NEXT_PUBLIC_PI_SANDBOX=false
 ```
+
+Sur Cloudflare Workers, les soldes doivent survivre entre les requêtes. Ajoutez un KV (ou Upstash) :
+
+```
+CF_ACCOUNT_ID=
+CF_KV_NAMESPACE_ID=
+CF_API_TOKEN=
+```
+
+Le wallet de l’app dans develop.pinet.com ne doit pas rester sur **None**, sinon les retraits A2U échouent.

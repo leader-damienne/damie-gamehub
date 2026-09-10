@@ -53,6 +53,73 @@ export default function AppShell() {
     }
   }, []);
 
+  const rememberReceipt = useCallback((paymentId: string, kind: string) => {
+    try {
+      const list = JSON.parse(localStorage.getItem("damie.receipts") || "[]") as { paymentId: string; kind: string }[];
+      if (!list.some((row) => row.paymentId === paymentId)) {
+        list.push({ paymentId, kind });
+        localStorage.setItem("damie.receipts", JSON.stringify(list.slice(-50)));
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  const recoverPayments = useCallback(
+    async (token: string) => {
+      const raw = sessionStorage.getItem("damie.incompletePayment");
+      if (raw) {
+        sessionStorage.removeItem("damie.incompletePayment");
+        try {
+          const pending = JSON.parse(raw) as { paymentId?: string; txid?: string };
+          if (pending.paymentId) {
+            const res = await api<{ pioneer?: Pioneer }>("/api/payments/incomplete", token, {
+              paymentId: pending.paymentId,
+              txid: pending.txid,
+            });
+            if (res.pioneer) applyPioneer(res.pioneer);
+            rememberReceipt(pending.paymentId, "deposit");
+          }
+        } catch {
+          /* continue with receipts */
+        }
+      }
+      try {
+        const receipts = JSON.parse(localStorage.getItem("damie.receipts") || "[]") as { paymentId: string }[];
+        if (receipts.length) {
+          const res = await api<{ pioneer?: Pioneer }>("/api/payments/sync", token, { receipts });
+          if (res.pioneer) applyPioneer(res.pioneer);
+        }
+      } catch {
+        /* ignore */
+      }
+      try {
+        await initPi();
+        if (!sessionStorage.getItem("damie.incompleteChecked")) {
+          sessionStorage.setItem("damie.incompleteChecked", "1");
+          void window.Pi!.authenticate(["username", "payments"], (payment) => {
+            void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", token, {
+              paymentId: payment.identifier,
+              txid: payment.transaction?.txid,
+            }).then((res) => {
+              if (res.pioneer) applyPioneer(res.pioneer);
+              rememberReceipt(payment.identifier, "deposit");
+            });
+          });
+        }
+      } catch {
+        /* already connected */
+      }
+      try {
+        const live = await api<{ pioneer?: Pioneer }>("/api/profile", token);
+        if (live.pioneer) applyPioneer(live.pioneer);
+      } catch {
+        /* keep current pioneer */
+      }
+    },
+    [applyPioneer, rememberReceipt],
+  );
+
   const applySession = useCallback((token: string) => {
     setSession(token);
     try {
@@ -73,10 +140,11 @@ export default function AppShell() {
       sessionStorage.removeItem("damie.piToken");
       setError("");
       api<{ session: string; pioneer: Pioneer }>("/api/auth/verify", null, { accessToken: piToken })
-        .then((data) => {
+        .then(async (data) => {
           applySession(data.session);
           applyPioneer(data.pioneer);
           setView("lobby");
+          await recoverPayments(data.session);
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Connexion Pi impossible");
@@ -93,17 +161,13 @@ export default function AppShell() {
       setSession(savedSession);
       setPioneer(JSON.parse(savedPioneer) as Pioneer);
       setView("lobby");
-      api<{ pioneer: Pioneer | null }>("/api/profile", savedSession)
-        .then((data) => {
-          if (data.pioneer) applyPioneer(data.pioneer);
-        })
-        .catch(() => undefined);
+      recoverPayments(savedSession).catch(() => undefined);
     } catch {
       localStorage.removeItem("damie.session");
       localStorage.removeItem("damie.pioneer");
       window.location.replace("/");
     }
-  }, [applyPioneer, applySession, boot]);
+  }, [applyPioneer, applySession, boot, recoverPayments]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -144,23 +208,35 @@ export default function AppShell() {
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
           {
             onReadyForServerApproval: async (paymentId) => {
-              try {
-                await api("/api/payments/approve", session, { paymentId, productId });
-              } catch (err) {
-                reject(err instanceof Error ? err : new Error("Approbation Pi impossible"));
-              }
+              await api("/api/payments/approve", session, { paymentId, productId });
             },
             onReadyForServerCompletion: async (paymentId, txid) => {
               try {
-                const res = await api<{ pioneer: Pioneer }>("/api/payments/complete", session, { paymentId, txid });
+                const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
+                  "/api/payments/complete",
+                  session,
+                  { paymentId, txid },
+                );
                 if (res.pioneer) applyPioneer(res.pioneer);
+                rememberReceipt(res.paymentId || paymentId, "deposit");
                 resolve();
               } catch (err) {
                 reject(err instanceof Error ? err : new Error("Paiement incomplet"));
+                throw err;
               }
             },
             onCancel: () => reject(new Error("Paiement annulé")),
-            onError: (err) => reject(err),
+            onError: (err, payment) => {
+              if (payment?.identifier) {
+                void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
+                  paymentId: payment.identifier,
+                  txid: payment.transaction?.txid,
+                }).then((res) => {
+                  if (res.pioneer) applyPioneer(res.pioneer);
+                });
+              }
+              reject(err instanceof Error ? err : new Error("Paiement Pi refusé"));
+            },
           },
         );
       });
@@ -266,9 +342,38 @@ export default function AppShell() {
     setBusy(true);
     setError("");
     try {
-      const res = await api<{ pioneer?: Pioneer; error?: string }>("/api/wallet", session, { action, ...extra });
+      const res = await api<{
+        pioneer?: Pioneer;
+        error?: string;
+        pendingWithdraw?: boolean;
+        paymentId?: string;
+      }>("/api/wallet", session, { action, ...extra });
       if (res.pioneer) applyPioneer(res.pioneer);
+      if (action === "withdraw" && res.paymentId) {
+        rememberReceipt(res.paymentId, "withdraw");
+      }
+      if (res.pendingWithdraw && res.paymentId) {
+        setError("Envoi des π en cours…");
+        for (let i = 0; i < 20; i += 1) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
+          const status = await api<{ pendingWithdraw?: boolean }>("/api/wallet", session, {
+            action: "withdraw-status",
+            paymentId: res.paymentId,
+          });
+          if (!status.pendingWithdraw) {
+            setError("");
+            return;
+          }
+        }
+        setError("Retrait envoyé à Pi. Les π peuvent mettre une minute à arriver dans le wallet Pioneer.");
+      }
     } catch (err) {
+      try {
+        const live = await api<{ pioneer?: Pioneer }>("/api/profile", session);
+        if (live.pioneer) applyPioneer(live.pioneer);
+      } catch {
+        /* ignore */
+      }
       setError(err instanceof Error ? err.message : "Opération impossible");
     } finally {
       setBusy(false);
@@ -536,7 +641,7 @@ export default function AppShell() {
                       key={amount}
                       className="gold-btn"
                       disabled={busy}
-                      onClick={() => pay(`deposit:${amount}`, amount, `Dépôt ${amount} π ${APP_NAME}`)}
+                      onClick={() => pay(`deposit:${amount}`, amount, `Dep ${amount} Pi`)}
                     >
                       +{amount} π
                     </button>

@@ -3,6 +3,7 @@ import path from "path";
 import type { Pioneer, StoreShape, TournamentState } from "./types";
 import { GAMES, TOURNAMENTS } from "./catalog";
 import { MIN_CONVERT, MIN_SWAP_PI, MIN_WITHDRAW, TOKEN, dghToPi, freePlayDgh, piToDgh, roundDgh, roundPi, stakePayout } from "./economy";
+import { durableLoad, durableSave } from "./durable-store";
 
 const emptyMissions = () => ({
   play3: 0,
@@ -43,29 +44,40 @@ function freshTournaments(): Record<string, TournamentState> {
 }
 
 function defaultStore(): StoreShape {
-  return { pioneers: {}, scores: [], tournaments: freshTournaments(), pendingPayments: {} };
+  return {
+    pioneers: {},
+    scores: [],
+    tournaments: freshTournaments(),
+    pendingPayments: {},
+    creditedPayments: {},
+  };
+}
+
+function normalizeStore(raw: StoreShape): StoreShape {
+  return {
+    pioneers: raw.pioneers || {},
+    scores: Array.isArray(raw.scores) ? raw.scores : [],
+    tournaments: raw.tournaments || freshTournaments(),
+    pendingPayments: raw.pendingPayments || {},
+    creditedPayments: raw.creditedPayments || {},
+  };
 }
 
 let memory: StoreShape | null = null;
+let readyPromise: Promise<void> | null = null;
 
-function load(): StoreShape {
-  if (memory) return rotateTournaments(memory);
+function fileLoad(): StoreShape | null {
   const file = storePath();
-  if (file) {
-    try {
-      const raw = fs.readFileSync(file, "utf8");
-      memory = JSON.parse(raw) as StoreShape;
-    } catch {
-      memory = defaultStore();
-    }
-  } else {
-    memory = defaultStore();
+  if (!file) return null;
+  try {
+    const raw = fs.readFileSync(file, "utf8");
+    return normalizeStore(JSON.parse(raw) as StoreShape);
+  } catch {
+    return null;
   }
-  return rotateTournaments(memory);
 }
 
-function save(data: StoreShape) {
-  memory = data;
+function fileSave(data: StoreShape) {
   const file = storePath();
   if (!file) return;
   try {
@@ -73,6 +85,31 @@ function save(data: StoreShape) {
   } catch {
     /* Cloudflare / serverless may block disk writes */
   }
+}
+
+export async function readyStore() {
+  if (memory) return;
+  if (!readyPromise) {
+    readyPromise = (async () => {
+      const remote = await durableLoad();
+      memory = remote ? normalizeStore(remote) : fileLoad() || defaultStore();
+    })().catch((err) => {
+      readyPromise = null;
+      throw err;
+    });
+  }
+  await readyPromise;
+}
+
+async function load(): Promise<StoreShape> {
+  await readyStore();
+  return rotateTournaments(memory!);
+}
+
+async function save(data: StoreShape) {
+  memory = data;
+  fileSave(data);
+  await durableSave(data);
 }
 
 function rotateTournaments(data: StoreShape) {
@@ -138,33 +175,77 @@ function rollDay(p: Pioneer) {
   return n;
 }
 
-export function upsertPioneer(uid: string, username: string) {
-  const data = load();
+export function isEmptyPioneer(p: Pioneer | null | undefined) {
+  if (!p) return true;
+  return (
+    !p.piCredit &&
+    !p.damie &&
+    !p.gamesPlayed &&
+    !p.coins &&
+    !(p.ledger || []).length
+  );
+}
+
+export async function absorbWalletSnap(uid: string, snap: Pioneer & { credited?: string[] } | null) {
+  if (!snap || snap.uid !== uid) return;
+  const data = await load();
+  const existing = data.pioneers[uid];
+  if (!existing || isEmptyPioneer(existing)) {
+    data.pioneers[uid] = normalize(snap);
+  }
+  for (const paymentId of snap.credited || []) {
+    if (!data.creditedPayments[paymentId]) data.creditedPayments[paymentId] = uid;
+  }
+  memory = data;
+}
+
+export async function creditedFor(uid: string) {
+  const data = await load();
+  return Object.entries(data.creditedPayments)
+    .filter(([, owner]) => owner === uid)
+    .map(([id]) => id);
+}
+
+export async function upsertPioneer(uid: string, username: string) {
+  const data = await load();
   const existing = data.pioneers[uid];
   data.pioneers[uid] = rollDay(existing ? { ...existing, username } : defaultPioneer(uid, username));
-  save(data);
+  await save(data);
   return data.pioneers[uid];
 }
 
-export function getPioneer(uid: string) {
-  const data = load();
+export async function getPioneer(uid: string) {
+  const data = await load();
   const p = data.pioneers[uid];
   if (!p) return null;
   data.pioneers[uid] = rollDay(p);
-  save(data);
+  await save(data);
   return data.pioneers[uid];
 }
 
-export function savePioneer(p: Pioneer) {
-  const data = load();
+export async function savePioneer(p: Pioneer) {
+  const data = await load();
   data.pioneers[p.uid] = p;
-  save(data);
+  await save(data);
   return p;
 }
 
-export function grantProduct(uid: string, productId: string) {
-  const p = getPioneer(uid);
-  if (!p) return null;
+export async function isPaymentCredited(paymentId: string) {
+  const data = await load();
+  return Boolean(data.creditedPayments[paymentId]);
+}
+
+export async function markPaymentCredited(paymentId: string, uid: string) {
+  const data = await load();
+  data.creditedPayments[paymentId] = uid;
+  await save(data);
+}
+
+export async function grantProduct(uid: string, productId: string, username = "", paymentId?: string) {
+  if (paymentId && (await isPaymentCredited(paymentId))) {
+    return (await getPioneer(uid)) || upsertPioneer(uid, username || "Pioneer");
+  }
+  const p = (await getPioneer(uid)) || (await upsertPioneer(uid, username || "Pioneer"));
   if (productId.startsWith("deposit:")) {
     const amount = roundPi(Number(productId.slice("deposit:".length)));
     if (amount > 0) {
@@ -181,26 +262,27 @@ export function grantProduct(uid: string, productId: string) {
   if (productId === "crown-200") p.crownScore += 200;
   if (productId.startsWith("tournament:")) {
     const tournamentId = productId.slice("tournament:".length);
-    enterTournament(uid, p.username, tournamentId, true);
+    await enterTournament(uid, p.username, tournamentId, true);
   }
-  savePioneer(p);
-  return p;
+  await savePioneer(p);
+  if (paymentId) await markPaymentCredited(paymentId, uid);
+  return (await getPioneer(uid)) || p;
 }
 
-export function buyWithCredit(uid: string, productId: string, piPrice: number) {
-  const p = getPioneer(uid);
+export async function buyWithCredit(uid: string, productId: string, piPrice: number) {
+  const p = await getPioneer(uid);
   if (!p) return { ok: false as const, error: "Compte introuvable" };
   const cost = piToDgh(piPrice);
   if (p.damie < cost) return { ok: false as const, error: `${TOKEN} insuffisants. Échangez d’abord vos π.` };
   p.damie -= cost;
   note(p, "buy", -cost, `Achat ${cost} ${TOKEN}`);
-  savePioneer(p);
-  const pioneer = grantProduct(uid, productId);
+  await savePioneer(p);
+  const pioneer = await grantProduct(uid, productId);
   return { ok: true as const, pioneer };
 }
 
-export function stakeDamie(uid: string, amount: number) {
-  const p = getPioneer(uid);
+export async function stakeDamie(uid: string, amount: number) {
+  const p = await getPioneer(uid);
   if (!p) return { ok: false as const, error: "Compte introuvable" };
   const stake = Math.floor(amount);
   if (stake < 0) return { ok: false as const, error: "Mise invalide" };
@@ -210,13 +292,13 @@ export function stakeDamie(uid: string, amount: number) {
   if (stake > 0) {
     p.damie -= stake;
     note(p, "stake", -stake, `Mise ${stake} ${TOKEN}`);
-    savePioneer(p);
+    await savePioneer(p);
   }
   return { ok: true as const, pioneer: p, stake };
 }
 
-export function convertPiToDamie(uid: string, piAmount: number) {
-  const p = getPioneer(uid);
+export async function convertPiToDamie(uid: string, piAmount: number) {
+  const p = await getPioneer(uid);
   if (!p) return { ok: false as const, error: "Compte introuvable" };
   const qty = roundPi(piAmount);
   if (qty < MIN_SWAP_PI) return { ok: false as const, error: `Minimum ${MIN_SWAP_PI} π` };
@@ -225,12 +307,12 @@ export function convertPiToDamie(uid: string, piAmount: number) {
   p.piCredit = roundPi(p.piCredit - qty);
   p.damie += tokens;
   note(p, "swap-in", tokens, `${qty} π → ${tokens} ${TOKEN}`);
-  savePioneer(p);
+  await savePioneer(p);
   return { ok: true as const, pioneer: p, tokens };
 }
 
-export function convertDamie(uid: string, damieAmount: number) {
-  const p = getPioneer(uid);
+export async function convertDamie(uid: string, damieAmount: number) {
+  const p = await getPioneer(uid);
   if (!p) return { ok: false as const, error: "Compte introuvable" };
   const qty = Math.floor(damieAmount);
   if (qty < MIN_CONVERT) return { ok: false as const, error: `Minimum ${MIN_CONVERT} ${TOKEN}` };
@@ -239,32 +321,32 @@ export function convertDamie(uid: string, damieAmount: number) {
   p.damie -= qty;
   p.piCredit = roundPi(p.piCredit + pi);
   note(p, "swap-out", pi, `${qty} ${TOKEN} → ${pi} π`);
-  savePioneer(p);
+  await savePioneer(p);
   return { ok: true as const, pioneer: p, pi };
 }
 
-export function withdrawPi(uid: string, amount: number) {
-  const p = getPioneer(uid);
+export async function withdrawPi(uid: string, amount: number) {
+  const p = await getPioneer(uid);
   if (!p) return { ok: false as const, error: "Compte introuvable" };
   const qty = roundPi(amount);
   if (qty < MIN_WITHDRAW) return { ok: false as const, error: `Minimum ${MIN_WITHDRAW} π` };
   if (p.piCredit < qty) return { ok: false as const, error: "Solde π insuffisant" };
   p.piCredit = roundPi(p.piCredit - qty);
   note(p, "withdraw", -qty, `Retrait ${qty} π vers le wallet Pi`);
-  savePioneer(p);
+  await savePioneer(p);
   return { ok: true as const, pioneer: p, amount: qty };
 }
 
-export function refundWithdraw(uid: string, amount: number) {
-  const p = getPioneer(uid);
+export async function refundWithdraw(uid: string, amount: number) {
+  const p = await getPioneer(uid);
   if (!p) return null;
   p.piCredit = roundPi(p.piCredit + amount);
   note(p, "refund", amount, "Retrait échoué, solde recrédité");
   return savePioneer(p);
 }
 
-export function recordScore(uid: string, username: string, gameId: string, score: number, stake = 0) {
-  const data = load();
+export async function recordScore(uid: string, username: string, gameId: string, score: number, stake = 0) {
+  const data = await load();
   const p = rollDay(data.pioneers[uid] || defaultPioneer(uid, username));
   const boosted = p.boostUntil > Date.now();
   const finalScore = boosted ? score * 2 : score;
@@ -290,12 +372,12 @@ export function recordScore(uid: string, username: string, gameId: string, score
   data.pioneers[uid] = p;
   data.scores.push({ uid, username, gameId, score: finalScore, at: Date.now() });
   data.scores = data.scores.sort((a, b) => b.score - a.score).slice(0, 400);
-  save(data);
+  await save(data);
   return { pioneer: p, score: finalScore, boosted, payout, stake, damie: earned };
 }
 
-export function leaderboard(gameId?: string) {
-  const data = load();
+export async function leaderboard(gameId?: string) {
+  const data = await load();
   const rows = gameId ? data.scores.filter((s) => s.gameId === gameId) : data.scores;
   const best = new Map<string, { username: string; score: number; gameId: string }>();
   for (const row of rows) {
@@ -307,8 +389,8 @@ export function leaderboard(gameId?: string) {
   return [...best.values()].sort((a, b) => b.score - a.score).slice(0, 50);
 }
 
-export function listTournaments() {
-  const data = load();
+export async function listTournaments() {
+  const data = await load();
   return TOURNAMENTS.map((def) => {
     const state = data.tournaments[def.id];
     const board = Object.entries(state.entries)
@@ -319,8 +401,8 @@ export function listTournaments() {
   });
 }
 
-export function enterTournament(uid: string, username: string, tournamentId: string, paid = false) {
-  const data = load();
+export async function enterTournament(uid: string, username: string, tournamentId: string, paid = false) {
+  const data = await load();
   const def = TOURNAMENTS.find((t) => t.id === tournamentId);
   const state = data.tournaments[tournamentId];
   if (!def || !state || !data.pioneers[uid]) return { ok: false as const, error: "Tournoi introuvable" };
@@ -340,37 +422,37 @@ export function enterTournament(uid: string, username: string, tournamentId: str
   state.entries[uid] = { username, best: 0 };
   player.missions.tournament1 = true;
   data.pioneers[uid] = player;
-  save(data);
+  await save(data);
   return { ok: true as const, pioneer: player, already: false };
 }
 
-export function tournamentScore(uid: string, tournamentId: string, score: number) {
-  const data = load();
+export async function tournamentScore(uid: string, tournamentId: string, score: number) {
+  const data = await load();
   const state = data.tournaments[tournamentId];
   if (!state?.entries[uid]) return { ok: false as const, error: "Non inscrit" };
   state.entries[uid].best = Math.max(state.entries[uid].best, score);
-  save(data);
+  await save(data);
   return { ok: true as const, best: state.entries[uid].best };
 }
 
-export function rememberPayment(paymentId: string, uid: string, productId: string) {
-  const data = load();
+export async function rememberPayment(paymentId: string, uid: string, productId: string) {
+  const data = await load();
   data.pendingPayments[paymentId] = { uid, productId };
-  save(data);
+  await save(data);
 }
 
-export function takePayment(paymentId: string) {
-  const data = load();
+export async function takePayment(paymentId: string) {
+  const data = await load();
   const pending = data.pendingPayments[paymentId];
   if (pending) {
     delete data.pendingPayments[paymentId];
-    save(data);
+    await save(data);
   }
   return pending;
 }
 
-export function markAd(uid: string) {
-  const p = getPioneer(uid);
+export async function markAd(uid: string) {
+  const p = await getPioneer(uid);
   if (!p) return null;
   p.adsWatched += 1;
   p.coins += 15;
@@ -380,8 +462,8 @@ export function markAd(uid: string) {
   return savePioneer(p);
 }
 
-export function claimMissions(uid: string) {
-  const p = getPioneer(uid);
+export async function claimMissions(uid: string) {
+  const p = await getPioneer(uid);
   if (!p) return null;
   const done =
     p.missions.play3 >= 3 && p.missions.score500 && p.missions.ad1 && p.missions.tournament1;
@@ -393,15 +475,15 @@ export function claimMissions(uid: string) {
   return savePioneer(p);
 }
 
-export function useLife(uid: string) {
-  const p = getPioneer(uid);
+export async function useLife(uid: string) {
+  const p = await getPioneer(uid);
   if (!p || p.lives < 1) return null;
   p.lives -= 1;
   return savePioneer(p);
 }
 
-export function gameStats() {
-  const data = load();
+export async function gameStats() {
+  const data = await load();
   const plays: Record<string, number> = {};
   const uniques: Record<string, Set<string>> = {};
   for (const row of data.scores) {

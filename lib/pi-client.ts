@@ -102,6 +102,7 @@ export async function authenticatePi(
 export async function api<T>(path: string, session: string | null, body?: unknown, method = "POST") {
   const res = await fetch(path, {
     method: body ? method : "GET",
+    credentials: "same-origin",
     headers: {
       "Content-Type": "application/json",
       ...(session ? { Authorization: `Bearer ${session}` } : {}),
