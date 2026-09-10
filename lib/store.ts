@@ -102,7 +102,12 @@ export async function readyStore() {
 }
 
 async function load(): Promise<StoreShape> {
-  await readyStore();
+  const remote = await durableLoad();
+  if (remote) {
+    memory = normalizeStore(remote);
+  } else if (!memory) {
+    await readyStore();
+  }
   return rotateTournaments(memory!);
 }
 

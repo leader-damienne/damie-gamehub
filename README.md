@@ -23,10 +23,11 @@ Deux URLs, deux clés API (develop.pinet.com) :
 
 Dans develop.pinet.com, le wallet de l’app ne doit pas rester sur **None**. Le compte développeur doit être KYC avec un wallet Mainnet migré.
 
-Sur Cloudflare Workers, les soldes doivent survivre entre les requêtes. Ajoutez un KV (ou Upstash) :
+Sur Cloudflare, liez un KV au Worker pour garder les soldes :
 
-```
-CF_ACCOUNT_ID=
-CF_KV_NAMESPACE_ID=
-CF_API_TOKEN=
-```
+1. Onglet **Bindings** du Worker `damiegamehub`
+2. **Add** → **KV Namespace**
+3. Variable name : `DAMIE_KV`
+4. Créer un namespace `damie-gamehub`, puis **Deploy**
+
+Sans ce binding, les soldes peuvent disparaître entre deux requêtes.
