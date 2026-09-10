@@ -12,11 +12,19 @@ type KvLike = {
 let boundKv: KvLike | null | undefined;
 
 function cfAccount() {
-  return process.env.CF_ACCOUNT_ID || process.env.CLOUDFLARE_ACCOUNT_ID || "";
+  return (
+    process.env.CF_ACCOUNT_ID ||
+    process.env.CLOUDFLARE_ACCOUNT_ID ||
+    "7d7041d091e5a7b0d7796149588c7f01"
+  );
 }
 
 function cfNamespace() {
-  return process.env.CF_KV_NAMESPACE_ID || process.env.CLOUDFLARE_KV_NAMESPACE_ID || "";
+  return (
+    process.env.CF_KV_NAMESPACE_ID ||
+    process.env.CLOUDFLARE_KV_NAMESPACE_ID ||
+    "b90fdd5fc1a34d46ad8cadfe41d9dc6d"
+  );
 }
 
 function cfToken() {
@@ -92,7 +100,7 @@ export function persistReady() {
 
 export function persistHint() {
   if (persistReady()) return "Soldes enregistrés dans Cloudflare KV.";
-  return "Attendez la fin du build Cloudflare. Le KV DAMIE_KV est lié via wrangler.jsonc.";
+  return "Ajoutez le secret CF_API_TOKEN (jeton damie-kv) dans Settings, puis Deploy.";
 }
 
 async function cfKvUrl(key: string) {
