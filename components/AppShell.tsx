@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
 import { MAX_DEPOSIT, MIN_CONVERT, MIN_DEPOSIT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, parseDghInput, parsePiInput, piToDgh } from "@/lib/economy";
-import { api, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi } from "@/lib/pi-client";
+import { api, bootPi, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
@@ -39,6 +39,7 @@ export default function AppShell() {
   const [depositInput, setDepositInput] = useState("");
   const [swapInput, setSwapInput] = useState("");
   const [convertInput, setConvertInput] = useState("");
+  const [payReady, setPayReady] = useState<boolean | null>(null);
 
   const games = useMemo(
     () => GAMES.filter((g) => category === "all" || g.category === category),
@@ -106,6 +107,56 @@ export default function AppShell() {
     [applyPioneer, rememberReceipt],
   );
 
+  const onPiIncomplete = useCallback(
+    (payment: PiPaymentDTO) => {
+      const token = session || localStorage.getItem("damie.session");
+      if (!token) {
+        try {
+          sessionStorage.setItem(
+            "damie.incompletePayment",
+            JSON.stringify({
+              paymentId: payment.identifier,
+              txid: payment.transaction?.txid,
+            }),
+          );
+        } catch {
+          /* ignore */
+        }
+        return;
+      }
+      void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", token, {
+        paymentId: payment.identifier,
+        txid: payment.transaction?.txid,
+      }).then((res) => {
+        if (res.pioneer) applyPioneer(res.pioneer);
+        rememberReceipt(payment.identifier, "deposit");
+      });
+    },
+    [applyPioneer, rememberReceipt, session],
+  );
+
+  const wakePayments = useCallback(async () => {
+    if (!hasPiSdk()) return false;
+    try {
+      await bootPi();
+      await ensurePaymentsAuth(onPiIncomplete);
+      setPayReady(true);
+      return true;
+    } catch {
+      setPayReady(false);
+      return false;
+    }
+  }, [onPiIncomplete]);
+
+  const restorePayments = useCallback(
+    async (token?: string | null) => {
+      const ok = await wakePayments();
+      if (token) await recoverPayments(token);
+      return ok;
+    },
+    [recoverPayments, wakePayments],
+  );
+
   const applySession = useCallback((token: string) => {
     setSession(token);
     try {
@@ -130,7 +181,7 @@ export default function AppShell() {
           applySession(data.session);
           applyPioneer(data.pioneer);
           setView("lobby");
-          await recoverPayments(data.session);
+          await restorePayments(data.session);
         })
         .catch((err) => {
           setError(err instanceof Error ? err.message : "Connexion Pi impossible");
@@ -139,21 +190,29 @@ export default function AppShell() {
     }
     const savedSession = localStorage.getItem("damie.session");
     const savedPioneer = localStorage.getItem("damie.pioneer");
-    if (!savedSession || !savedPioneer) {
-      window.location.replace("/");
+    if (savedSession && savedPioneer) {
+      try {
+        setSession(savedSession);
+        setPioneer(JSON.parse(savedPioneer) as Pioneer);
+        setView("lobby");
+        restorePayments(savedSession).catch(() => undefined);
+      } catch {
+        localStorage.removeItem("damie.session");
+        localStorage.removeItem("damie.pioneer");
+      }
       return;
     }
-    try {
-      setSession(savedSession);
-      setPioneer(JSON.parse(savedPioneer) as Pioneer);
-      setView("lobby");
-      recoverPayments(savedSession).catch(() => undefined);
-    } catch {
-      localStorage.removeItem("damie.session");
-      localStorage.removeItem("damie.pioneer");
-      window.location.replace("/");
-    }
-  }, [applyPioneer, applySession, boot, recoverPayments]);
+    void bootPi().catch(() => undefined);
+  }, [applyPioneer, applySession, boot, restorePayments]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState !== "visible" || !session || !hasPiSdk() || busy) return;
+      void wakePayments();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => document.removeEventListener("visibilitychange", onVisible);
+  }, [busy, session, wakePayments]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -187,15 +246,6 @@ export default function AppShell() {
     }
     setBusy(true);
     setError("");
-    const onIncomplete = (payment: PiPaymentDTO) => {
-      void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
-        paymentId: payment.identifier,
-        txid: payment.transaction?.txid,
-      }).then((res) => {
-        if (res.pioneer) applyPioneer(res.pioneer);
-        rememberReceipt(payment.identifier, "deposit");
-      });
-    };
     const createOnce = () =>
       new Promise<void>((resolve, reject) => {
         window.Pi!.createPayment(
@@ -221,30 +271,39 @@ export default function AppShell() {
             },
             onCancel: () => reject(new Error("Paiement annulé")),
             onError: (err, payment) => {
-              if (payment?.identifier) onIncomplete(payment);
+              if (payment?.identifier) onPiIncomplete(payment);
               reject(err instanceof Error ? err : new Error("Paiement Pi refusé"));
             },
           },
         );
       });
     try {
-      await initPi();
-      await ensurePaymentsAuth(onIncomplete);
-      try {
-        await createOnce();
-      } catch (err) {
-        const raw = err instanceof Error ? err.message : String(err || "");
-        if (!/payments["']?\s*scope/i.test(raw)) throw err;
-        clearPaymentsAuth();
-        await ensurePaymentsAuth(onIncomplete);
-        await createOnce();
+      await bootPi();
+      let lastError: unknown;
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        try {
+          if (attempt > 0) clearPaymentsAuth();
+          await ensurePaymentsAuth(onPiIncomplete);
+          setPayReady(true);
+          await createOnce();
+          return true;
+        } catch (err) {
+          lastError = err;
+          const raw = err instanceof Error ? err.message : String(err || "");
+          if (/annul/i.test(raw)) throw err;
+          if (/payments["']?\s*scope/i.test(raw) || /incomplete/i.test(raw) || /unauthor/i.test(raw)) {
+            clearPaymentsAuth();
+            continue;
+          }
+          throw err;
+        }
       }
-      return true;
+      throw lastError instanceof Error ? lastError : new Error("Paiement impossible");
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Paiement impossible";
       setError(
         /payments["']?\s*scope/i.test(raw)
-          ? "Pi demande Autoriser une fois par visite. Validez, puis saisissez votre montant."
+          ? "Touchez Autoriser dans Pi, puis Déposer à nouveau. Une fois validé, ça reste actif."
           : raw,
       );
       return false;
@@ -255,20 +314,34 @@ export default function AppShell() {
 
   function openWallet() {
     setView("wallet");
-    if (!session || !hasPiSdk()) return;
-    void initPi()
-      .then(() =>
-        ensurePaymentsAuth((payment) => {
-          void api<{ pioneer?: Pioneer }>("/api/payments/incomplete", session, {
-            paymentId: payment.identifier,
-            txid: payment.transaction?.txid,
-          }).then((res) => {
-            if (res.pioneer) applyPioneer(res.pioneer);
-            rememberReceipt(payment.identifier, "deposit");
-          });
-        }),
-      )
-      .catch(() => undefined);
+    void restorePayments(session);
+  }
+
+  function enterWithPi() {
+    setError("");
+    if (!hasPiSdk()) {
+      setError("Ouvrez ce lien dans le Pi Browser, pas Chrome.");
+      return;
+    }
+    setBusy(true);
+    void bootPi()
+      .then(() => ensurePaymentsAuth(onPiIncomplete))
+      .then(async (auth) => {
+        if (!auth?.accessToken) throw new Error("Pi n’a pas renvoyé de jeton.");
+        const data = await api<{ session: string; pioneer: Pioneer }>("/api/auth/verify", null, {
+          accessToken: auth.accessToken,
+        });
+        applySession(data.session);
+        applyPioneer(data.pioneer);
+        setPayReady(true);
+        setView("lobby");
+        await recoverPayments(data.session);
+      })
+      .catch((err) => {
+        clearPaymentsAuth();
+        setError(err instanceof Error ? err.message : "Connexion Pi impossible");
+      })
+      .finally(() => setBusy(false));
   }
 
   async function submitDeposit() {
@@ -450,7 +523,7 @@ export default function AppShell() {
     if (data.pioneer) applyPioneer(data.pioneer);
   }
 
-  if (!boot || !pioneer) {
+  if (!boot) {
     return (
       <div className="app-root">
         <div className="phone">
@@ -458,12 +531,28 @@ export default function AppShell() {
             <div className="brand-lock" translate="no">
               {APP_NAME}
             </div>
-            <p>{error || "Ouverture du lobby…"}</p>
-            {error && (
-              <a className="gold-btn" href="/">
-                Réessayer
-              </a>
-            )}
+            <p>Ouverture du lobby…</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (!pioneer) {
+    return (
+      <div className="app-root">
+        <div className="phone">
+          <div className="splash">
+            <img src="/logo-1024.png" alt={APP_NAME} />
+            <div className="brand-lock" translate="no">
+              {APP_NAME}
+            </div>
+            <p>Connexion et paiements uniquement avec Pi. Une autorisation suffit, même après rechargement.</p>
+            {error && <div className="warn">{error}</div>}
+            <button className="gold-btn" type="button" disabled={busy} onClick={enterWithPi}>
+              {busy ? "Autorisez dans Pi…" : "Entrer avec Pi"}
+            </button>
+            <div className="notice">Touchez Entrer avec Pi, puis Autoriser. Les dépôts restent actifs ensuite.</div>
           </div>
         </div>
       </div>
@@ -526,8 +615,19 @@ export default function AppShell() {
           )}
 
           {error && <div className="warn">{error}</div>}
-
-          {view === "lobby" && pioneer && (
+          {!payReady && payReady !== null && (
+            <div className="warn">
+              Touchez une fois pour activer les dépôts et retraits Pi. Ça reste valable après rechargement.
+              <button
+                className="gold-btn"
+                style={{ marginTop: 8, width: "100%" }}
+                disabled={busy}
+                onClick={() => void wakePayments()}
+              >
+                Activer les paiements Pi
+              </button>
+            </div>
+          )}
             <>
               <div className="hero">
                 <div className="hero-row">

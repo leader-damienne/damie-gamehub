@@ -98,7 +98,7 @@ export function clearPaymentsAuth() {
   paymentsAuth = null;
 }
 
-/** Authenticate once per hub visit. Pi cannot keep the payments scope after a page reload. */
+/** Keep payments scope for this document. After a reload, call again — Pi usually restores silently. */
 export function ensurePaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => void) {
   if (onIncomplete) incompleteHandler = onIncomplete;
   if (!hasPiSdk()) {
@@ -113,6 +113,10 @@ export function ensurePaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => voi
     );
   }
   return paymentsAuth;
+}
+
+export function paymentsAuthActive() {
+  return Boolean(paymentsAuth);
 }
 
 export async function api<T>(path: string, session: string | null, body?: unknown, method = "POST") {

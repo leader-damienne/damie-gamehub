@@ -139,15 +139,25 @@ export async function finishA2UPayment(paymentId: string) {
 }
 
 export async function sendA2UPayment(uid: string, amount: number, memo: string) {
-  const created = await createA2UPayment(uid, amount, memo);
-  const paymentId = created.identifier;
-  const deadline = Date.now() + 12000;
-  while (Date.now() < deadline) {
-    const result = await finishA2UPayment(paymentId);
-    if (result.done) return { paymentId, pending: false as const, payment: result.payment };
-    await sleep(500);
+  await drainIncompleteA2U().catch(() => undefined);
+  const run = async () => {
+    const created = await createA2UPayment(uid, amount, memo);
+    const paymentId = created.identifier;
+    const deadline = Date.now() + 25000;
+    while (Date.now() < deadline) {
+      const result = await finishA2UPayment(paymentId);
+      if (result.done) return { paymentId, pending: false as const, payment: result.payment };
+      await sleep(400);
+    }
+    return { paymentId, pending: true as const, payment: created };
+  };
+  try {
+    return await run();
+  } catch {
+    await drainIncompleteA2U().catch(() => undefined);
+    await sleep(800);
+    return run();
   }
-  return { paymentId, pending: true as const, payment: created };
 }
 
 export async function drainIncompleteA2U() {

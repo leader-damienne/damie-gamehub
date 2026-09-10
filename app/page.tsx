@@ -1,24 +1,8 @@
-import { APP_NAME } from "@/lib/site";
+import AppShell from "@/components/AppShell";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export default function HomePage() {
-  return (
-    <div className="app-root">
-      <div className="phone">
-        <div className="splash">
-          <img src="/logo-1024.png" alt={APP_NAME} />
-          <div className="brand-lock" translate="no">
-            {APP_NAME}
-          </div>
-          <p>
-            10 jeux instantanés, tournois, classements et boutique. Connexion et paiements
-            uniquement avec Pi.
-          </p>
-          <a className="gold-btn" href="/enter">
-            Entrer avec Pi
-          </a>
-          <div className="notice">Touchez Entrer avec Pi, puis Autoriser.</div>
-        </div>
-      </div>
-    </div>
-  );
+  return <AppShell />;
 }

@@ -68,7 +68,7 @@ export function piLoginHtml() {
           .then(function (auth) {
             if (!auth || !auth.accessToken) throw new Error("Pi n'a pas renvoye de jeton.");
             sessionStorage.setItem("damie.piToken", auth.accessToken);
-            location.replace("/hub");
+            location.replace("/");
           })
           .catch(function (e) {
             btn.textContent = "Entrer avec Pi";
