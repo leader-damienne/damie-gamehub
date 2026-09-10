@@ -11,6 +11,18 @@ export type View =
 
 export type GameCategory = "arcade" | "puzzle" | "action" | "competitive" | "casual";
 
+export type GameBoardKind =
+  | "catch"
+  | "ring"
+  | "cards"
+  | "orbit"
+  | "stack"
+  | "lanes"
+  | "grid"
+  | "slash"
+  | "tap"
+  | "maze";
+
 export type GameDef = {
   id: string;
   title: string;
@@ -20,6 +32,7 @@ export type GameDef = {
   howTo: string;
   rules: string[];
   perks: string[];
+  board?: GameBoardKind;
 };
 
 export type Pioneer = {

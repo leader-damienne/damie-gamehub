@@ -12,6 +12,7 @@ import {
   StackKing,
 } from "./ArcadeGames";
 import { GridMerge, KingTap, MazeCrown, MemoryVault, PulseTap } from "./BoardGames";
+import { ColorRush, GapFlyer, GoldSnake, LaneRush, SimonCrown, TargetCrown } from "./ExtraGames";
 
 type Props = {
   gameId: string;
@@ -65,6 +66,18 @@ export default function GameScreen({
         return <MazeCrown {...props} />;
       case "pulse-tap":
         return <PulseTap {...props} />;
+      case "lane-rush":
+        return <LaneRush {...props} />;
+      case "target-crown":
+        return <TargetCrown {...props} />;
+      case "gold-snake":
+        return <GoldSnake {...props} />;
+      case "gap-flyer":
+        return <GapFlyer {...props} />;
+      case "color-rush":
+        return <ColorRush {...props} />;
+      case "simon-crown":
+        return <SimonCrown {...props} />;
       default:
         return <KingTap {...props} />;
     }
