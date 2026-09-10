@@ -578,10 +578,16 @@ img {
 .game-hud {
   position: absolute;
   inset: 0 0 auto 0;
-  z-index: 2;
+  z-index: 40;
   display: flex;
   justify-content: space-between;
   padding: 12px;
+  pointer-events: none;
+}
+
+.game-hud button,
+.game-hud .pill {
+  pointer-events: auto;
 }
 
 .game-stage {

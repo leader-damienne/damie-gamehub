@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import GameCanvas from "./GameCanvas";
+import { drawBasket, drawBomb, drawCoin, drawRock, drawShip, paintBoard } from "./sprites";
 
 type RunProps = {
   onScore: (score: number) => void;
@@ -21,10 +22,9 @@ export function CrownCatch({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, _y, type) => {
+      onPointer={(x, _y, type, w) => {
         if (type === "move" || type === "down") {
-          const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-          if (canvas) state.current.x = Math.min(0.92, Math.max(0.08, x / canvas.clientWidth));
+          state.current.x = Math.min(0.92, Math.max(0.08, x / Math.max(1, w)));
         }
       }}
       onFrame={(ctx, w, h, dt) => {
@@ -56,23 +56,12 @@ export function CrownCatch({ onScore, onOver }: RunProps) {
           }
           return it.y < 1.05;
         });
-        ctx.fillStyle = "#070707";
-        ctx.fillRect(0, 0, w, h);
-        const g = ctx.createLinearGradient(0, 0, 0, h);
-        g.addColorStop(0, "#14100a");
-        g.addColorStop(1, "#070707");
-        ctx.fillStyle = g;
-        ctx.fillRect(0, 0, w, h);
+        paintBoard(ctx, w, h);
         for (const it of s.items) {
-          ctx.beginPath();
-          ctx.fillStyle = it.gold ? "#d4af37" : "#3a3a3a";
-          ctx.arc(it.x * w, it.y * h, it.gold ? 11 : 10, 0, Math.PI * 2);
-          ctx.fill();
+          if (it.gold) drawCoin(ctx, it.x * w, it.y * h, 14);
+          else drawBomb(ctx, it.x * w, it.y * h, 13);
         }
-        ctx.fillStyle = "#d4af37";
-        ctx.fillRect(s.x * w - 36, h - 46, 72, 16);
-        ctx.fillStyle = "#f0d56a";
-        ctx.fillRect(s.x * w - 8, h - 58, 16, 12);
+        drawBasket(ctx, s.x * w, h - 42);
       }}
     />
   );
@@ -92,11 +81,9 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, _y, type) => {
-        const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-        if (!canvas) return;
+      onPointer={(x, _y, type, w) => {
         if (type === "up") state.current.dir = 0;
-        else state.current.dir = x < canvas.clientWidth / 2 ? -1 : 1;
+        else state.current.dir = x < w / 2 ? -1 : 1;
       }}
       onFrame={(ctx, w, h, dt) => {
         const s = state.current;
@@ -110,9 +97,9 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
         const cx = w / 2;
         const cy = h / 2;
         const orbit = Math.min(w, h) * 0.32;
-        ctx.fillStyle = "#080808";
-        ctx.fillRect(0, 0, w, h);
+        paintBoard(ctx, w, h);
         ctx.strokeStyle = "rgba(212,175,55,0.25)";
+        ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(cx, cy, orbit, 0, Math.PI * 2);
         ctx.stroke();
@@ -123,10 +110,8 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
           return arr.filter((o) => {
             const x = cx + Math.cos(o.a) * o.r * Math.min(w, h);
             const y = cy + Math.sin(o.a) * o.r * Math.min(w, h);
-            ctx.beginPath();
-            ctx.fillStyle = gold ? "#f0d56a" : "#555";
-            ctx.arc(x, y, gold ? 7 : 11, 0, Math.PI * 2);
-            ctx.fill();
+            if (gold) drawCoin(ctx, x, y, 8);
+            else drawRock(ctx, x, y, 12);
             const hit = Math.hypot(x - px, y - py) < 18;
             if (hit && gold) {
               s.score += 25;
@@ -143,10 +128,7 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
         };
         s.rocks = move(s.rocks, false);
         s.coins = move(s.coins, true);
-        ctx.beginPath();
-        ctx.fillStyle = "#d4af37";
-        ctx.arc(px, py, 10, 0, Math.PI * 2);
-        ctx.fill();
+        drawShip(ctx, px, py, s.a);
       }}
     />
   );
@@ -165,12 +147,10 @@ export function GoldSlash({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, y, type) => {
-        const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-        if (!canvas) return;
+      onPointer={(x, y, type, w, h) => {
         const s = state.current;
-        const nx = x / canvas.clientWidth;
-        const ny = y / canvas.clientHeight;
+        const nx = x / Math.max(1, w);
+        const ny = y / Math.max(1, h);
         if (type === "down") s.last = { x: nx, y: ny, on: true };
         if (type === "up") s.last.on = false;
         if (type === "move" && s.last.on) {
@@ -204,26 +184,25 @@ export function GoldSlash({ onScore, onOver }: RunProps) {
             gold: Math.random() > 0.22,
           });
         }
-        ctx.fillStyle = "#070707";
-        ctx.fillRect(0, 0, w, h);
+        paintBoard(ctx, w, h);
         s.orbs.forEach((o) => {
           o.vy += dt * 0.9;
           o.x += o.vx * dt;
           o.y += o.vy * dt;
-          ctx.beginPath();
-          ctx.fillStyle = o.gold ? "#d4af37" : "#2c2c2c";
-          ctx.arc(o.x * w, o.y * h, 16, 0, Math.PI * 2);
-          ctx.fill();
+          if (o.gold) drawCoin(ctx, o.x * w, o.y * h, 16);
+          else drawBomb(ctx, o.x * w, o.y * h, 15);
         });
-        const before = s.orbs.length;
-        s.orbs = s.orbs.filter((o) => o.y < 1.2);
-        if (s.orbs.length < before) {
-          s.missed += before - s.orbs.length;
-          if (s.missed >= 8 && !s.dead) {
-            s.dead = true;
-            onOver(s.score);
+        s.orbs = s.orbs.filter((o) => {
+          if (o.y < 1.2) return true;
+          if (o.gold) {
+            s.missed += 1;
+            if (s.missed >= 8 && !s.dead) {
+              s.dead = true;
+              onOver(s.score);
+            }
           }
-        }
+          return false;
+        });
       }}
     />
   );
@@ -244,9 +223,9 @@ export function StackKing({ onScore, onOver }: RunProps) {
       onPointer={(_x, _y, type) => {
         if (type === "down") state.current.drop = true;
       }}
-      onFrame={(ctx, w, h) => {
+      onFrame={(ctx, w, h, dt) => {
         const s = state.current;
-        s.cur.x += s.cur.dir * 0.0075;
+        s.cur.x += s.cur.dir * 0.45 * dt;
         if (s.cur.x < 0.08 || s.cur.x > 0.92) s.cur.dir *= -1;
         if (s.drop) {
           s.drop = false;
@@ -266,8 +245,7 @@ export function StackKing({ onScore, onOver }: RunProps) {
             onScore(s.score);
           }
         }
-        ctx.fillStyle = "#080808";
-        ctx.fillRect(0, 0, w, h);
+        paintBoard(ctx, w, h);
         const base = h - 80;
         s.blocks.forEach((b, i) => {
           ctx.fillStyle = i % 2 ? "#d4af37" : "#f0d56a";
@@ -310,22 +288,25 @@ export function ReflexRing({ onScore, onOver }: RunProps) {
   }, [onOver]);
 
   return (
-    <div className="tap-king" onPointerDown={() => {
-      if (!running.current) return;
-      const hit = Math.abs(pulse - band.current) < 0.09;
-      if (hit) {
-        score.current += 40;
-        onScore(score.current);
-        band.current = 0.45 + Math.random() * 0.3;
-        setPulse(0);
-      } else {
-        lives.current -= 1;
-        if (lives.current <= 0) {
-          running.current = false;
-          onOver(score.current);
+    <div
+      className="tap-king"
+      onPointerDown={() => {
+        if (!running.current) return;
+        const hit = Math.abs(pulse - band.current) < 0.09;
+        if (hit) {
+          score.current += 40;
+          onScore(score.current);
+          band.current = 0.45 + Math.random() * 0.3;
+          setPulse(0);
+        } else {
+          lives.current -= 1;
+          if (lives.current <= 0) {
+            running.current = false;
+            onOver(score.current);
+          }
         }
-      }
-    }}>
+      }}
+    >
       <svg width="260" height="260" viewBox="0 0 260 260">
         <circle cx="130" cy="130" r="100" fill="none" stroke="#222" strokeWidth="18" />
         <circle

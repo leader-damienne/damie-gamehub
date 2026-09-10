@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import GameCanvas from "./GameCanvas";
-import { paintBoard } from "./sprites";
+import { paintBoard, drawBasket, drawBomb, drawCoin, drawCrown } from "./sprites";
 
 type RunProps = {
   onScore: (score: number) => void;
@@ -21,11 +21,9 @@ export function LaneRush({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, _y, type) => {
+      onPointer={(x, _y, type, w) => {
         if (type !== "down") return;
-        const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-        if (!canvas) return;
-        state.current.lane = x < canvas.clientWidth / 3 ? 0 : x > (canvas.clientWidth * 2) / 3 ? 2 : 1;
+        state.current.lane = x < w / 3 ? 0 : x > (w * 2) / 3 ? 2 : 1;
       }}
       onFrame={(ctx, w, h, dt) => {
         const s = state.current;
@@ -60,15 +58,10 @@ export function LaneRush({ onScore, onOver }: RunProps) {
         }
         for (const it of s.items) {
           const x = ((it.lane + 0.5) * w) / 3;
-          ctx.beginPath();
-          ctx.fillStyle = it.gold ? "#d4af37" : "#3a3a3a";
-          ctx.arc(x, it.y * h, it.gold ? 12 : 16, 0, Math.PI * 2);
-          ctx.fill();
+          if (it.gold) drawCoin(ctx, x, it.y * h, 13);
+          else drawBomb(ctx, x, it.y * h, 15);
         }
-        ctx.fillStyle = "#d4af37";
-        ctx.fillRect(((s.lane + 0.5) * w) / 3 - 22, h * 0.84, 44, 28);
-        ctx.fillStyle = "#f5e6a3";
-        ctx.fillRect(((s.lane + 0.5) * w) / 3 - 10, h * 0.81, 20, 10);
+        drawBasket(ctx, ((s.lane + 0.5) * w) / 3, h * 0.88);
       }}
     />
   );
@@ -87,11 +80,9 @@ export function TargetCrown({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, y, type) => {
+      onPointer={(x, y, type, w, h) => {
         if (type !== "down") return;
-        const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-        if (!canvas) return;
-        state.current.tap = { x: x / canvas.clientWidth, y: y / canvas.clientHeight };
+        state.current.tap = { x: x / Math.max(1, w), y: y / Math.max(1, h) };
       }}
       onFrame={(ctx, w, h, dt) => {
         const s = state.current;
@@ -132,17 +123,8 @@ export function TargetCrown({ onScore, onOver }: RunProps) {
         s.targets = s.targets.filter((t) => t.life > 0);
         paintBoard(ctx, w, h);
         for (const t of s.targets) {
-          ctx.beginPath();
-          ctx.fillStyle = t.gold ? `rgba(212,175,55,${0.4 + t.life * 0.5})` : "#2c2c2c";
-          ctx.arc(t.x * w, t.y * h, 22, 0, Math.PI * 2);
-          ctx.fill();
-          if (t.gold) {
-            ctx.strokeStyle = "#f5e6a3";
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(t.x * w, t.y * h, 14, 0, Math.PI * 2);
-            ctx.stroke();
-          }
+          if (t.gold) drawCrown(ctx, t.x * w, t.y * h, 16);
+          else drawBomb(ctx, t.x * w, t.y * h, 16);
         }
       }}
     />
@@ -169,13 +151,11 @@ export function GoldSnake({ onScore, onOver }: RunProps) {
   return (
     <GameCanvas
       running
-      onPointer={(x, y, type) => {
+      onPointer={(x, y, type, w, h) => {
         if (type !== "down") return;
-        const canvas = document.querySelector(".board") as HTMLCanvasElement | null;
-        if (!canvas) return;
         const s = state.current;
-        const nx = x / canvas.clientWidth - 0.5;
-        const ny = y / canvas.clientHeight - 0.5;
+        const nx = x / Math.max(1, w) - 0.5;
+        const ny = y / Math.max(1, h) - 0.5;
         if (Math.abs(nx) > Math.abs(ny)) {
           if (s.dir.x === 0) s.next = { x: nx > 0 ? 1 : -1, y: 0 };
         } else if (s.dir.y === 0) {
@@ -212,8 +192,7 @@ export function GoldSnake({ onScore, onOver }: RunProps) {
         paintBoard(ctx, w, h);
         const cw = w / s.cols;
         const ch = h / s.rows;
-        ctx.fillStyle = "#d4af37";
-        ctx.fillRect(s.food.x * cw + 4, s.food.y * ch + 4, cw - 8, ch - 8);
+        drawCoin(ctx, s.food.x * cw + cw / 2, s.food.y * ch + ch / 2, Math.min(cw, ch) * 0.32);
         s.body.forEach((p, i) => {
           ctx.fillStyle = i === 0 ? "#f5e6a3" : "#c9a227";
           ctx.fillRect(p.x * cw + 2, p.y * ch + 2, cw - 4, ch - 4);
@@ -274,10 +253,7 @@ export function GapFlyer({ onScore, onOver }: RunProps) {
           ctx.fillRect(p.x * w, (p.gap - 0.14) * h - 10, 0.16 * w, 10);
           ctx.fillRect(p.x * w, (p.gap + 0.14) * h, 0.16 * w, 10);
         }
-        ctx.beginPath();
-        ctx.fillStyle = "#f0d56a";
-        ctx.arc(0.28 * w, s.y * h, 12, 0, Math.PI * 2);
-        ctx.fill();
+        drawCoin(ctx, 0.28 * w, s.y * h, 14);
       }}
     />
   );
@@ -381,7 +357,7 @@ export function ColorRush({ onScore, onOver }: RunProps) {
 }
 
 export function SimonCrown({ onScore, onOver }: RunProps) {
-  const pads = ["♛", "◆", "★", "●"];
+  const pads = ["Or", "Ivoire", "Bronze", "Nuit"];
   const [lit, setLit] = useState<number | null>(null);
   const [msg, setMsg] = useState("Regardez");
   const seq = useRef<number[]>([Math.floor(Math.random() * 4)]);
@@ -438,7 +414,7 @@ export function SimonCrown({ onScore, onOver }: RunProps) {
             className="gold-btn"
             style={{
               height: 88,
-              fontSize: 28,
+              fontSize: 16,
               opacity: lit === i ? 1 : 0.45,
               transform: lit === i ? "scale(1.04)" : "none",
             }}

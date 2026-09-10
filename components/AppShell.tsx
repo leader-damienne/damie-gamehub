@@ -34,6 +34,7 @@ export default function AppShell() {
   const [stake, setStake] = useState(0);
   const [stakePick, setStakePick] = useState<string | null>(null);
   const [stats, setStats] = useState<Record<string, { plays: number; players: number }>>({});
+  const [boot, setBoot] = useState(false);
 
   const games = useMemo(
     () => GAMES.filter((g) => category === "all" || g.category === category),
@@ -61,6 +62,11 @@ export default function AppShell() {
   }, []);
 
   useEffect(() => {
+    setBoot(true);
+  }, []);
+
+  useEffect(() => {
+    if (!boot) return;
     const piToken = sessionStorage.getItem("damie.piToken");
     if (piToken) {
       sessionStorage.removeItem("damie.piToken");
@@ -96,7 +102,7 @@ export default function AppShell() {
       localStorage.removeItem("damie.pioneer");
       window.location.replace("/");
     }
-  }, [applyPioneer, applySession]);
+  }, [applyPioneer, applySession, boot]);
 
   const refreshTours = useCallback(async () => {
     const data = await api<{ tournaments: TourRow[] }>("/api/tournaments", null);
@@ -274,7 +280,7 @@ export default function AppShell() {
     if (data.pioneer) applyPioneer(data.pioneer);
   }
 
-  if (!pioneer) {
+  if (!boot || !pioneer) {
     return (
       <div className="app-root">
         <div className="phone">
@@ -412,7 +418,7 @@ export default function AppShell() {
                         JOUER
                         {stats[g.id]
                           ? ` · ${stats[g.id].players} joueur${stats[g.id].players > 1 ? "s" : ""} · ${stats[g.id].plays} partie${stats[g.id].plays > 1 ? "s" : ""}`
-                          : " · nouveau"}
+                          : ""}
                       </div>
                     </div>
                   </button>

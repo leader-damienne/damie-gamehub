@@ -162,12 +162,20 @@ export function MazeCrown({ onScore, onOver }: RunProps) {
   const H = 11;
   const [player, setPlayer] = useState({ x: 1, y: 1 });
   const [guard, setGuard] = useState({ x: 7, y: 9 });
-  const [coins, setCoins] = useState(() =>
-    Array.from({ length: 8 }, () => ({
-      x: 1 + Math.floor(Math.random() * 7),
-      y: 1 + Math.floor(Math.random() * 9),
-    })),
-  );
+  const [coins, setCoins] = useState(() => {
+    const out: { x: number; y: number }[] = [];
+    const seen = new Set<string>();
+    while (out.length < 8) {
+      const x = 1 + Math.floor(Math.random() * 7);
+      const y = 1 + Math.floor(Math.random() * 9);
+      if (x === 1 && y === 1) continue;
+      const key = `${x},${y}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push({ x, y });
+    }
+    return out;
+  });
   const score = useRef(0);
   const start = useRef<{ x: number; y: number } | null>(null);
   const dead = useRef(false);
@@ -331,13 +339,16 @@ export function KingTap({ onScore, onOver }: RunProps) {
   const [left, setLeft] = useState(15);
   const score = useRef(0);
   const combo = useRef(0);
+  const ended = useRef(false);
 
   useEffect(() => {
     const id = setInterval(() => {
       setLeft((s) => {
         if (s <= 1) {
-          clearInterval(id);
-          onOver(score.current);
+          if (!ended.current) {
+            ended.current = true;
+            onOver(score.current);
+          }
           return 0;
         }
         return s - 1;

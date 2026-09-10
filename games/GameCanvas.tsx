@@ -5,7 +5,7 @@ import { useEffect, useRef, type PointerEvent } from "react";
 type Props = {
   running: boolean;
   onFrame: (ctx: CanvasRenderingContext2D, w: number, h: number, dt: number) => void;
-  onPointer?: (x: number, y: number, type: "down" | "move" | "up") => void;
+  onPointer?: (x: number, y: number, type: "down" | "move" | "up", w: number, h: number) => void;
 };
 
 export default function GameCanvas({ running, onFrame, onPointer }: Props) {
@@ -44,9 +44,11 @@ export default function GameCanvas({ running, onFrame, onPointer }: Props) {
     };
   }, [running]);
 
-  const pos = (e: PointerEvent<HTMLCanvasElement>) => {
-    const r = ref.current!.getBoundingClientRect();
-    return { x: e.clientX - r.left, y: e.clientY - r.top };
+  const emit = (e: PointerEvent<HTMLCanvasElement>, type: "down" | "move" | "up") => {
+    const canvas = ref.current;
+    if (!canvas) return;
+    const r = canvas.getBoundingClientRect();
+    onPointer?.(e.clientX - r.left, e.clientY - r.top, type, canvas.clientWidth, canvas.clientHeight);
   };
 
   return (
@@ -55,10 +57,10 @@ export default function GameCanvas({ running, onFrame, onPointer }: Props) {
       className="board"
       onPointerDown={(e) => {
         e.currentTarget.setPointerCapture(e.pointerId);
-        onPointer?.(pos(e).x, pos(e).y, "down");
+        emit(e, "down");
       }}
-      onPointerMove={(e) => onPointer?.(pos(e).x, pos(e).y, "move")}
-      onPointerUp={(e) => onPointer?.(pos(e).x, pos(e).y, "up")}
+      onPointerMove={(e) => emit(e, "move")}
+      onPointerUp={(e) => emit(e, "up")}
     />
   );
 }
