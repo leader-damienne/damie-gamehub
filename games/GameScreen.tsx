@@ -13,6 +13,18 @@ import {
 } from "./ArcadeGames";
 import { GridMerge, KingTap, MazeCrown, MemoryVault, PulseTap } from "./BoardGames";
 import { ColorRush, GapFlyer, GoldSnake, LaneRush, SimonCrown, TargetCrown } from "./ExtraGames";
+import {
+  GoldRally,
+  HoverDash,
+  JetStrike,
+  MotoRush,
+  NitroCrown,
+  RingFighter,
+  SkyAce,
+  TankPush,
+  TurretSiege,
+  WheelieGold,
+} from "./VehicleGames";
 
 type Props = {
   gameId: string;
@@ -78,6 +90,26 @@ export default function GameScreen({
         return <ColorRush {...props} />;
       case "simon-crown":
         return <SimonCrown {...props} />;
+      case "moto-rush":
+        return <MotoRush {...props} />;
+      case "wheelie-gold":
+        return <WheelieGold {...props} />;
+      case "gold-rally":
+        return <GoldRally {...props} />;
+      case "nitro-crown":
+        return <NitroCrown {...props} />;
+      case "ring-fighter":
+        return <RingFighter {...props} />;
+      case "turret-siege":
+        return <TurretSiege {...props} />;
+      case "tank-push":
+        return <TankPush {...props} />;
+      case "sky-ace":
+        return <SkyAce {...props} />;
+      case "jet-strike":
+        return <JetStrike {...props} />;
+      case "hover-dash":
+        return <HoverDash {...props} />;
       default:
         return <KingTap {...props} />;
     }

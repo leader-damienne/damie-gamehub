@@ -17,6 +17,16 @@ const BY_ID: Record<string, GameBoardKind> = {
   "gap-flyer": "orbit",
   "color-rush": "cards",
   "simon-crown": "tap",
+  "moto-rush": "lanes",
+  "wheelie-gold": "orbit",
+  "gold-rally": "lanes",
+  "nitro-crown": "orbit",
+  "ring-fighter": "tap",
+  "turret-siege": "slash",
+  "tank-push": "catch",
+  "sky-ace": "orbit",
+  "jet-strike": "slash",
+  "hover-dash": "lanes",
 };
 
 const BY_CATEGORY: Record<GameCategory, GameBoardKind[]> = {
@@ -25,6 +35,9 @@ const BY_CATEGORY: Record<GameCategory, GameBoardKind[]> = {
   action: ["orbit", "slash"],
   competitive: ["ring", "lanes"],
   casual: ["stack", "tap"],
+  racing: ["lanes", "orbit"],
+  combat: ["slash", "tap"],
+  flight: ["orbit", "slash"],
 };
 
 export const BOARD_KINDS: GameBoardKind[] = [
