@@ -1,9 +1,22 @@
-import { piApiKeyForHost, requestHost } from "./pi-host";
+import { isMainnetHost, piApiKeyForHost, requestHost } from "./pi-host";
+import { hasWalletSeed, submitA2UOnChain, walletSeedForHost } from "./pi-horizon";
 
 const API = "https://api.minepi.com/v2";
 
 export function explainPiError(raw: string) {
   const text = (raw || "").toLowerCase();
+  if (text.includes("feature_not_available") || text.includes("feature is not available")) {
+    return "Retraits Pi (A2U) indisponibles sur ce projet. Dans develop.pinet.com, ouvrez l’app Mainnet, créez un App Wallet (pas None), alimentez-le, puis ajoutez PI_WALLET_SEED (graine qui commence par S) dans Cloudflare Settings.";
+  }
+  if (text.includes("missing_wallet")) {
+    return "Wallet de l’app Pi manquant. Dans develop.pinet.com, générez un App Wallet et copiez la graine secrète (S…) dans PI_WALLET_SEED.";
+  }
+  if (text.includes("ongoing_payment")) {
+    return "Un retrait Pi est déjà en cours. Attendez quelques secondes puis réessayez.";
+  }
+  if (text.includes("private_seed") || text.includes("seed_mismatch")) {
+    return "PI_WALLET_SEED ne correspond pas au wallet de l’app Mainnet.";
+  }
   if (text.includes("wallet") && (text.includes("none") || text.includes("not") || text.includes("missing") || text.includes("setup"))) {
     return "Wallet de l’app Pi non configuré. Dans develop.pinet.com, créez un App Wallet (pas None) et alimentez-le.";
   }
@@ -28,7 +41,11 @@ export function explainPiError(raw: string) {
   return raw.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim().slice(0, 240) || "Erreur Pi";
 }
 
-export function createPiApi(key: string) {
+type PiApiOptions = { seed?: string; mainnet?: boolean };
+
+export function createPiApi(key: string, options: PiApiOptions = {}) {
+  const seed = (options.seed || "").trim();
+  const mainnet = Boolean(options.mainnet);
   async function piFetch(path: string, init: RequestInit = {}) {
     const res = await fetch(`${API}${path}`, {
       ...init,
@@ -41,7 +58,14 @@ export function createPiApi(key: string) {
     });
     const text = await res.text();
     if (!res.ok) {
-      const explained = explainPiError(text || `HTTP ${res.status}`);
+      let raw = text || `HTTP ${res.status}`;
+      try {
+        const parsed = JSON.parse(text) as { error?: string; error_message?: string };
+        if (parsed.error) raw = `${parsed.error} ${parsed.error_message || ""}`.trim();
+      } catch {
+        /* keep raw */
+      }
+      const explained = explainPiError(raw);
       throw new Error(
         res.status === 401 || res.status === 403
           ? `Clé API Pi refusée (${res.status}). Sur damiegamehub.com ajoutez PI_API_KEY_MAINNET (projet Mainnet).`
@@ -156,17 +180,40 @@ export function createPiApi(key: string) {
     return { done: true as const, payment };
   }
 
+  async function submitCreatedPayment(payment: PiPaymentDTO) {
+    if (payment.transaction?.txid) return payment.transaction.txid;
+    if (!seed) {
+      throw new Error(
+        mainnet
+          ? "Ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings pour envoyer les retraits."
+          : "Ajoutez PI_WALLET_SEED_TESTNET (graine S… du App Wallet Testnet) dans Cloudflare Settings.",
+      );
+    }
+    return submitA2UOnChain({
+      seed,
+      amount: payment.amount,
+      paymentId: payment.identifier,
+      fromAddress: payment.from_address,
+      toAddress: payment.to_address,
+      mainnet,
+      network: payment.network,
+    });
+  }
+
   async function drainIncompleteA2U() {
     const pending = await listIncompleteServerPayments();
     const results: { paymentId: string; done: boolean }[] = [];
     for (const payment of pending) {
       try {
-        const txid = payment.transaction?.txid;
+        let txid = payment.transaction?.txid;
+        if (!txid && seed && payment.from_address && payment.to_address) {
+          txid = await submitCreatedPayment(payment);
+        }
         if (txid && !payment.status.developer_completed) {
           await completePayment(payment.identifier, txid);
           results.push({ paymentId: payment.identifier, done: true });
         } else {
-          results.push({ paymentId: payment.identifier, done: false });
+          results.push({ paymentId: payment.identifier, done: Boolean(txid) });
         }
       } catch {
         results.push({ paymentId: payment.identifier, done: false });
@@ -180,17 +227,25 @@ export function createPiApi(key: string) {
     const run = async () => {
       const created = await createA2UPayment(uid, amount, memo);
       const paymentId = created.identifier;
-      const deadline = Date.now() + 25000;
-      while (Date.now() < deadline) {
-        const result = await finishA2UPayment(paymentId);
-        if (result.done) return { paymentId, pending: false as const, payment: result.payment };
-        await sleep(400);
+      if (created.status.developer_completed) {
+        return { paymentId, pending: false as const, payment: created };
       }
-      return { paymentId, pending: true as const, payment: created };
+      const txid = await submitCreatedPayment(created);
+      const completed = await completePaymentReliable(paymentId, txid);
+      return { paymentId, pending: false as const, payment: completed };
     };
     try {
       return await run();
-    } catch {
+    } catch (error) {
+      const msg = error instanceof Error ? error.message.toLowerCase() : "";
+      if (
+        msg.includes("feature_not_available") ||
+        msg.includes("indisponibles") ||
+        msg.includes("pi_wallet_seed") ||
+        msg.includes("clé api pi refusée")
+      ) {
+        throw error;
+      }
       await drainIncompleteA2U().catch(() => undefined);
       await sleep(800);
       return run();
@@ -213,8 +268,12 @@ export function createPiApi(key: string) {
 export type PiApi = ReturnType<typeof createPiApi>;
 
 export function withPiRequest<T>(req: Request, fn: (pi: PiApi) => T): T {
-  return fn(createPiApi(piApiKeyForHost(requestHost(req))));
+  const host = requestHost(req);
+  const mainnet = isMainnetHost(host);
+  return fn(createPiApi(piApiKeyForHost(host), { seed: walletSeedForHost(mainnet), mainnet }));
 }
+
+export { hasWalletSeed, walletSeedForHost };
 
 export function hasApiKey(req?: Request) {
   if (req) return Boolean(piApiKeyForHost(requestHost(req)));

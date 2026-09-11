@@ -9,6 +9,7 @@
     "start": "next start --hostname 0.0.0.0 --port 3314"
   },
   "dependencies": {
+    "@stellar/stellar-base": "^13.1.0",
     "next": "^15.5.2",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"

@@ -1,8 +1,8 @@
 import { NextResponse } from "next/server";
 import { bearer, readSession } from "@/lib/session";
 import { buyWithCredit, convertDamie, convertPiToDamie, refundWithdraw, stakeDamie, withdrawPi } from "@/lib/store";
-import { hasApiKey, withPiRequest } from "@/lib/pi-server";
-import { requirePiReady } from "@/lib/pi-flags";
+import { hasApiKey, hasWalletSeed, withPiRequest } from "@/lib/pi-server";
+import { isMainnetHost, requestHost, requirePiReady } from "@/lib/pi-flags";
 import { SHOP } from "@/lib/catalog";
 import { bootWallet, walletJson } from "@/lib/wallet-cookie";
 
@@ -66,6 +66,15 @@ export async function POST(req: Request) {
     if (blocked) return NextResponse.json({ error: blocked }, { status: 503 });
     if (!hasApiKey(req)) {
       return NextResponse.json({ error: "Clé API Pi manquante. Impossible d’envoyer des π." }, { status: 503 });
+    }
+    if (!hasWalletSeed(isMainnetHost(requestHost(req)))) {
+      return NextResponse.json(
+        {
+          error:
+            "Ajoutez PI_WALLET_SEED dans Cloudflare Settings : la graine secrète (S…, 56 caractères) du App Wallet Mainnet, créée dans develop.pinet.com. Sans ce wallet, Pi refuse les retraits.",
+        },
+        { status: 503 },
+      );
     }
     try {
       await pi.drainIncompleteA2U();

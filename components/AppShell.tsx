@@ -39,6 +39,7 @@ export default function AppShell() {
   const [depositInput, setDepositInput] = useState("");
   const [swapInput, setSwapInput] = useState("");
   const [convertInput, setConvertInput] = useState("");
+  const [withdrawInput, setWithdrawInput] = useState("");
   const [payReady, setPayReady] = useState<boolean | null>(null);
 
   const games = useMemo(
@@ -373,8 +374,23 @@ export default function AppShell() {
       setError("Solde π insuffisant pour cet échange.");
       return;
     }
-    await walletCall("swap-in", { amount });
-    setSwapInput("");
+    const swapped = await walletCall("swap-in", { amount });
+    if (swapped) setSwapInput("");
+  }
+
+  async function submitWithdraw() {
+    if (!pioneer) return;
+    const amount = parsePiInput(withdrawInput);
+    if (amount === null || amount < MIN_WITHDRAW) {
+      setError(`Indiquez un retrait d’au moins ${MIN_WITHDRAW} π.`);
+      return;
+    }
+    if (amount > pioneer.piCredit) {
+      setError("Solde π insuffisant pour ce retrait.");
+      return;
+    }
+    const ok = await walletCall("withdraw", { amount });
+    if (ok) setWithdrawInput("");
   }
 
   async function submitConvert() {
@@ -387,8 +403,8 @@ export default function AppShell() {
       setError(`${TOKEN} insuffisants pour cet échange.`);
       return;
     }
-    await walletCall("convert", { amount });
-    setConvertInput("");
+    const converted = await walletCall("convert", { amount });
+    if (converted) setConvertInput("");
   }
 
   async function watchAd() {
@@ -480,7 +496,7 @@ export default function AppShell() {
   }
 
   async function walletCall(action: string, extra: Record<string, unknown> = {}) {
-    if (!session) return;
+    if (!session) return false;
     setBusy(true);
     setError("");
     try {
@@ -504,11 +520,12 @@ export default function AppShell() {
           });
           if (!status.pendingWithdraw) {
             setError("");
-            return;
+            return true;
           }
         }
         setError("Retrait envoyé à Pi. Les π peuvent mettre une minute à arriver dans le wallet Pioneer.");
       }
+      return true;
     } catch (err) {
       try {
         const live = await api<{ pioneer?: Pioneer }>("/api/profile", session);
@@ -517,6 +534,7 @@ export default function AppShell() {
         /* ignore */
       }
       setError(err instanceof Error ? err.message : "Opération impossible");
+      return false;
     } finally {
       setBusy(false);
     }
@@ -887,13 +905,37 @@ export default function AppShell() {
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Retirer vers le wallet Pi</h4>
-                <p>Uniquement le solde π. Minimum {MIN_WITHDRAW} π. Envoi vers votre wallet Pioneer.</p>
+                <p>
+                  Saisissez le montant à envoyer vers votre wallet Pioneer. Uniquement le solde π.
+                  Minimum {MIN_WITHDRAW} π.
+                </p>
+                <div className="amount-row">
+                  <input
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} π`}
+                    value={withdrawInput}
+                    disabled={busy}
+                    onChange={(e) => setWithdrawInput(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") void submitWithdraw();
+                    }}
+                  />
+                  <button
+                    className="gold-btn"
+                    disabled={busy || (pioneer.piCredit || 0) < MIN_WITHDRAW}
+                    onClick={() => void submitWithdraw()}
+                  >
+                    Retirer
+                  </button>
+                </div>
                 <button
                   className="ghost-btn"
+                  style={{ marginTop: 8, width: "100%" }}
                   disabled={busy || (pioneer.piCredit || 0) < MIN_WITHDRAW}
                   onClick={() => walletCall("withdraw", { amount: pioneer.piCredit })}
                 >
-                  Retirer {Number(pioneer.piCredit || 0).toFixed(2)} π
+                  Tout retirer ({Number(pioneer.piCredit || 0).toFixed(2)} π)
                 </button>
               </div>
               <div className="section-title">
