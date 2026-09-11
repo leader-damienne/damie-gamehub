@@ -6,7 +6,7 @@ const API = "https://api.minepi.com/v2";
 export function explainPiError(raw: string) {
   const text = (raw || "").toLowerCase();
   if (text.includes("feature_not_available") || text.includes("feature is not available")) {
-    return "Retraits Pi (A2U) indisponibles sur ce projet. Dans develop.pinet.com, ouvrez l’app Mainnet, créez un App Wallet (pas None), alimentez-le, puis ajoutez PI_WALLET_SEED (graine qui commence par S) dans Cloudflare Settings.";
+    return "Retraits Test-π indisponibles sur ce projet. Dans develop.pinet.com, ouvrez l’app Testnet, créez un App Wallet (pas None), alimentez-le avec des Test-π, puis ajoutez PI_WALLET_SEED_TESTNET (graine S…) dans Cloudflare Settings.";
   }
   if (text.includes("missing_wallet")) {
     return "Wallet de l’app Pi manquant. Dans develop.pinet.com, générez un App Wallet et copiez la graine secrète (S…) dans PI_WALLET_SEED.";
@@ -68,7 +68,9 @@ export function createPiApi(key: string, options: PiApiOptions = {}) {
       const explained = explainPiError(raw);
       throw new Error(
         res.status === 401 || res.status === 403
-          ? `Clé API Pi refusée (${res.status}). Sur damiegamehub.com ajoutez PI_API_KEY_MAINNET (projet Mainnet).`
+          ? mainnet
+            ? `Clé API Pi refusée (${res.status}). Sur damiegamehub.com ajoutez PI_API_KEY_MAINNET (projet Mainnet).`
+            : `Clé API Pi refusée (${res.status}). Ajoutez PI_API_KEY (projet Testnet) dans Cloudflare.`
           : `${explained} [${res.status}]`,
       );
     }

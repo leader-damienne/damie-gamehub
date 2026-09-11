@@ -27,8 +27,11 @@ export function requestHost(req: Request) {
   return cleanHost(new URL(req.url).hostname);
 }
 
+/** false = Test-π partout (dépôts et retraits). true = vrais π sur damiegamehub.com. */
+export const USE_MAINNET = false;
+
 export function isMainnetHost(host: string) {
-  return host === "damiegamehub.com";
+  return USE_MAINNET && host === "damiegamehub.com";
 }
 
 export function piApiKeyForHost(host: string) {

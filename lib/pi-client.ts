@@ -1,7 +1,10 @@
 "use client";
 
+import { USE_MAINNET } from "./pi-host";
+
 export function piSandbox() {
   if (typeof window === "undefined") return true;
+  if (!USE_MAINNET) return true;
   const host = window.location.hostname;
   if (host === "damiegamehub.com" || host === "www.damiegamehub.com") return false;
   return true;

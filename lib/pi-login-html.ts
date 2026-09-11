@@ -35,7 +35,7 @@ export function piLoginHtml() {
       }
 
       var origin = location.origin;
-      var sandbox = location.hostname !== "damiegamehub.com" && location.hostname !== "www.damiegamehub.com";
+      var sandbox = true;
       var btn = document.getElementById("pi-enter");
       var errBox = document.getElementById("pi-error");
       var hint = document.getElementById("pi-hint");

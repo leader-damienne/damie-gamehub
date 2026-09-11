@@ -1,3 +1,5 @@
+import { isMainnetHost, requestHost } from "@/lib/pi-host";
+
 export const dynamic = "force-dynamic";
 
 const MAINNET_KEY =
@@ -7,13 +9,13 @@ const TESTNET_KEY =
   "a95b6725f5b2defc8c7169a110ae881ab4c943181348d56be730c2a209b1d86bca0d76fdfb34a3c627591a9d94870a0cc6ad6d5f0826b51cde1ec6e0811b5964";
 
 function keyForHost(host: string) {
-  const name = host.split(":")[0].toLowerCase();
-  if (name === "damiegamehub.com" || name === "www.damiegamehub.com") return MAINNET_KEY;
+  const name = host.split(":")[0].toLowerCase().replace(/^www\./, "");
+  if (isMainnetHost(name)) return MAINNET_KEY;
   return TESTNET_KEY;
 }
 
 export function GET(req: Request) {
-  const host = req.headers.get("host") || "";
+  const host = req.headers.get("host") || requestHost(req);
   return new Response(keyForHost(host), {
     status: 200,
     headers: {

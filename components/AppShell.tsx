@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
 import { MAX_DEPOSIT, MIN_CONVERT, MIN_DEPOSIT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, parseDghInput, parsePiInput, piToDgh } from "@/lib/economy";
-import { api, bootPi, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi } from "@/lib/pi-client";
+import { api, bootPi, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi, piSandbox } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
@@ -41,6 +41,7 @@ export default function AppShell() {
   const [convertInput, setConvertInput] = useState("");
   const [withdrawInput, setWithdrawInput] = useState("");
   const [payReady, setPayReady] = useState<boolean | null>(null);
+  const piLabel = piSandbox() ? "Test-π" : "π";
 
   const games = useMemo(
     () => GAMES.filter((g) => category === "all" || g.category === category),
@@ -632,7 +633,7 @@ export default function AppShell() {
                 </div>
               </div>
               <div className="pill" onClick={openWallet} style={{ cursor: "pointer" }}>
-                {Number(pioneer?.piCredit || 0).toFixed(2)} π · {formatDgh(pioneer?.damie ?? 0)} {TOKEN}
+                {Number(pioneer?.piCredit || 0).toFixed(2)} {piLabel} · {formatDgh(pioneer?.damie ?? 0)} {TOKEN}
               </div>
             </div>
           )}
@@ -666,7 +667,7 @@ export default function AppShell() {
                   <img className="hero-logo" src="/logo.png" alt={APP_NAME} />
                 </div>
                 <p className="hero-lead">
-                  Déposez des π, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en π pour retirer.
+                  Déposez des {piLabel}, échangez-les en {TOKEN} pour jouer, puis reconvertissez vos gains en {piLabel} pour retirer.
                 </p>
                 <button className="gold-btn" onClick={() => setStakePick("crown-catch")}>
                   Jouer maintenant
@@ -802,12 +803,12 @@ export default function AppShell() {
             <>
               <div className="section-title">
                 <h3>Portefeuille</h3>
-                <span>100 {TOKEN} = 1 π</span>
+                <span>100 {TOKEN} = 1 {piLabel}{piSandbox() ? " · Testnet" : ""}</span>
               </div>
               <div className="stats">
                 <div className="stat">
                   <b>{Number(pioneer.piCredit || 0).toFixed(2)}</b>
-                  <span>π à échanger</span>
+                  <span>{piLabel} à échanger</span>
                 </div>
                 <div className="stat">
                   <b>{formatDgh(pioneer.damie || 0)}</b>
@@ -819,16 +820,16 @@ export default function AppShell() {
                 </div>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
-                <h4>Déposer des π</h4>
+                <h4>Déposer des {piLabel}</h4>
                 <p>
-                  Saisissez le montant à envoyer depuis votre wallet Pi. Minimum {MIN_DEPOSIT} π.
-                  L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
+                  Le montant est pris sur votre wallet Pi Testnet (pas des vrais π). Minimum {MIN_DEPOSIT}{" "}
+                  {piLabel}. L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
                 </p>
                 <div className="amount-row">
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder="Montant en π"
+                    placeholder={`Montant en ${piLabel}`}
                     value={depositInput}
                     disabled={busy}
                     onChange={(e) => setDepositInput(e.target.value)}
@@ -842,16 +843,16 @@ export default function AppShell() {
                 </div>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
-                <h4>Échanger π → {TOKEN}</h4>
+                <h4>Échanger {piLabel} → {TOKEN}</h4>
                 <p>
                   Seuls les {TOKEN} servent aux mises, à la boutique et aux tournois. Minimum{" "}
-                  {MIN_SWAP_PI} π.
+                  {MIN_SWAP_PI} {piLabel}.
                 </p>
                 <div className="amount-row">
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} π`}
+                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} ${piLabel}`}
                     value={swapInput}
                     disabled={busy}
                     onChange={(e) => setSwapInput(e.target.value)}
@@ -873,13 +874,13 @@ export default function AppShell() {
                   disabled={busy || (pioneer.piCredit || 0) < MIN_SWAP_PI}
                   onClick={() => walletCall("swap-in", { amount: pioneer.piCredit })}
                 >
-                  Tout échanger ({Number(pioneer.piCredit || 0).toFixed(2)} π → {piToDgh(pioneer.piCredit || 0)} {TOKEN})
+                  Tout échanger ({Number(pioneer.piCredit || 0).toFixed(2)} {piLabel} → {piToDgh(pioneer.piCredit || 0)} {TOKEN})
                 </button>
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
-                <h4>Échanger {TOKEN} → π</h4>
+                <h4>Échanger {TOKEN} → {piLabel}</h4>
                 <p>
-                  Pour retirer vos gains, reconvertissez d’abord vos {TOKEN} en π (min. {MIN_CONVERT}{" "}
+                  Pour retirer vos gains, reconvertissez d’abord vos {TOKEN} en {piLabel} (min. {MIN_CONVERT}{" "}
                   {TOKEN}).
                 </p>
                 <div className="amount-row">
@@ -906,14 +907,13 @@ export default function AppShell() {
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Retirer vers le wallet Pi</h4>
                 <p>
-                  Saisissez le montant à envoyer vers votre wallet Pioneer. Uniquement le solde π.
-                  Minimum {MIN_WITHDRAW} π.
+                  Les mêmes Test-π déposés vous sont renvoyés. Minimum {MIN_WITHDRAW} {piLabel}.
                 </p>
                 <div className="amount-row">
                   <input
                     type="text"
                     inputMode="decimal"
-                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} π`}
+                    placeholder={`Max ${Number(pioneer.piCredit || 0).toFixed(2)} ${piLabel}`}
                     value={withdrawInput}
                     disabled={busy}
                     onChange={(e) => setWithdrawInput(e.target.value)}
@@ -935,7 +935,7 @@ export default function AppShell() {
                   disabled={busy || (pioneer.piCredit || 0) < MIN_WITHDRAW}
                   onClick={() => walletCall("withdraw", { amount: pioneer.piCredit })}
                 >
-                  Tout retirer ({Number(pioneer.piCredit || 0).toFixed(2)} π)
+                  Tout retirer ({Number(pioneer.piCredit || 0).toFixed(2)} {piLabel})
                 </button>
               </div>
               <div className="section-title">
@@ -1010,7 +1010,7 @@ export default function AppShell() {
               </div>
               <div className="list">
                 <div className="list-item">
-                  <span>π à échanger / retirer</span>
+                  <span>{piLabel} à échanger / retirer</span>
                   <b>{Number(pioneer.piCredit || 0).toFixed(2)}</b>
                 </div>
                 <div className="list-item">
@@ -1069,9 +1069,9 @@ export default function AppShell() {
                 nécessaires au jeu, aux tournois et aux classements.
               </p>
               <p>
-                Les π déposés doivent être échangés en {TOKEN} pour jouer, miser ou acheter.
-                Pour retirer, les {TOKEN} sont reconvertis en π (100 {TOKEN} = 1 π), puis envoyés vers le
-                wallet Pi. Pas de monnaie fiat.
+                Les {piLabel} déposés doivent être échangés en {TOKEN} pour jouer, miser ou acheter.
+                Pour retirer, les {TOKEN} sont reconvertis en {piLabel} (100 {TOKEN} = 1 {piLabel}), puis
+                renvoyés vers le wallet Pi Testnet. Pas de monnaie fiat, pas de vrais π.
               </p>
             </div>
           )}
