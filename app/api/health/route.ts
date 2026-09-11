@@ -10,8 +10,9 @@ export async function GET(req: Request) {
   await probePersist();
   const host = requestHost(req);
   const mainnet = isMainnetHost(host);
-  const hasDedicatedMainnet = Boolean(process.env.PI_API_KEY_MAINNET);
+  const mainnetKey = process.env.PI_API_KEY_MAINNET || "";
   const walletSeed = hasWalletSeed(mainnet);
+  const hasDedicatedMainnet = Boolean(mainnetKey) && !(mainnetKey.trim().startsWith("S") && mainnetKey.trim().length === 56);
   const ready = persistReady();
   return NextResponse.json({
     app: APP_NAME,
@@ -26,7 +27,7 @@ export async function GET(req: Request) {
     hint: !walletSeed
       ? mainnet
         ? "Retraits : ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings."
-        : "Retraits Test-π : ajoutez PI_WALLET_SEED_TESTNET (graine S… du App Wallet Testnet) dans Cloudflare Settings, et alimentez ce wallet avec des Test-π."
+        : "Retraits Test-π : cliquez le crayon de PI_API_KEY_MAINNET, collez la graine S… (56 caractères) du App Wallet Testnet, puis Deploy. Cloudflare n’ajoute pas de nouvelle ligne sur ce Worker."
       : !ready
         ? persistHint()
         : mainnet && !hasDedicatedMainnet

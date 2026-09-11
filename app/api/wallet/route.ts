@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Ajoutez PI_WALLET_SEED_TESTNET (ou PI_WALLET_SEED) dans Cloudflare Settings : la graine secrète (S…, 56 caractères) du App Wallet Testnet, créée dans develop.pinet.com. Alimentez ce wallet avec des Test-π (wallet.pi → Testnet).",
+            "Cloudflare n’ajoute pas de nouveau secret sur ce Worker. Cliquez le crayon de PI_API_KEY_MAINNET, collez la graine S… (56 caractères) du App Wallet Testnet, puis Deploy. Alimentez ce wallet avec des Test-π (wallet.pi → Testnet).",
         },
         { status: 503 },
       );
