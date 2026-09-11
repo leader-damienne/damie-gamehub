@@ -6,17 +6,24 @@ import { isMainnetHost, requestHost } from "@/lib/pi-host";
 
 export const dynamic = "force-dynamic";
 
+function envValue(name: string) {
+  return String((process.env as Record<string, string | undefined>)[name] || "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
 export async function GET(req: Request) {
   await probePersist();
   const host = requestHost(req);
   const mainnet = isMainnetHost(host);
-  const mainnetKey = process.env.PI_API_KEY_MAINNET || "";
+  const mainnetKey = envValue("PI_API_KEY_MAINNET");
   const walletSeed = hasWalletSeed(mainnet);
-  const hasDedicatedMainnet = Boolean(mainnetKey) && !(mainnetKey.trim().startsWith("S") && mainnetKey.trim().length === 56);
+  const hasDedicatedMainnet = Boolean(mainnetKey) && !mainnetKey.startsWith("S");
   const ready = persistReady();
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
+    code: "wallet-v2",
     host,
     network: mainnet ? "mainnet" : "sandbox",
     paymentsReady: hasApiKey(req),
@@ -27,7 +34,7 @@ export async function GET(req: Request) {
     hint: !walletSeed
       ? mainnet
         ? "Retraits : ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings."
-        : "Retraits Test-π : cliquez le crayon de PI_API_KEY_MAINNET, collez la graine S… (56 caractères) du App Wallet Testnet, puis Deploy. Cloudflare n’ajoute pas de nouvelle ligne sur ce Worker."
+        : "Onglet Deployments : Retry / Deploy la dernière version. Puis crayon PI_API_KEY_MAINNET, graine S…, bouton Deploy (pas seulement Save version)."
       : !ready
         ? persistHint()
         : mainnet && !hasDedicatedMainnet

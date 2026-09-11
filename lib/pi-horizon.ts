@@ -5,25 +5,25 @@ const HORIZON = {
   testnet: { url: "https://api.testnet.minepi.com", passphrase: "Pi Testnet" },
 };
 
-function firstWalletSeed(...values: Array<string | undefined>) {
-  for (const value of values) {
-    const seed = (value || "").trim();
-    if (seed.startsWith("S") && seed.length === 56) return seed;
+function envValue(name: string) {
+  return String((process.env as Record<string, string | undefined>)[name] || "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function firstWalletSeed(...names: string[]) {
+  for (const name of names) {
+    const seed = envValue(name);
+    if (seed.startsWith("S") && StrKey.isValidEd25519SecretSeed(seed)) return seed;
   }
   return "";
 }
 
 export function walletSeedForHost(mainnet: boolean) {
   if (mainnet) {
-    return firstWalletSeed(process.env.PI_WALLET_SEED_MAINNET, process.env.PI_WALLET_SEED);
+    return firstWalletSeed("PI_WALLET_SEED_MAINNET", "PI_WALLET_SEED");
   }
-  // Ce Worker Git n’accepte souvent pas de nouveau nom de secret : on réutilise
-  // PI_API_KEY_MAINNET (inutilisé en Testnet) s’il contient une graine S…
-  return firstWalletSeed(
-    process.env.PI_WALLET_SEED_TESTNET,
-    process.env.PI_WALLET_SEED,
-    process.env.PI_API_KEY_MAINNET,
-  );
+  return firstWalletSeed("PI_WALLET_SEED_TESTNET", "PI_WALLET_SEED", "PI_API_KEY_MAINNET");
 }
 
 export function hasWalletSeed(mainnet: boolean) {
