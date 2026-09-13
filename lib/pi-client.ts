@@ -134,6 +134,12 @@ export function ensurePaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => voi
   return paymentsAuth;
 }
 
+/** Drop a stale username-only session and ask Pi for payments again. Call from a tap. */
+export function forcePaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => void) {
+  paymentsAuth = null;
+  return ensurePaymentsAuth(onIncomplete);
+}
+
 export function paymentsAuthActive() {
   return Boolean(paymentsAuth);
 }

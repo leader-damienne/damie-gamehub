@@ -8,9 +8,10 @@ import {
   api,
   bootPi,
   clearPaymentsAuth,
-  ensurePaymentsAuth,
+  forcePaymentsAuth,
   hasPiSdk,
   initPi,
+  isPiInited,
   piError,
   piSandbox,
 } from "@/lib/pi-client";
@@ -151,14 +152,12 @@ export default function AppShell() {
     if (!hasPiSdk()) return false;
     try {
       await bootPi();
-      await ensurePaymentsAuth(onPiIncomplete);
-      setPayReady(true);
       return true;
     } catch {
       setPayReady(false);
       return false;
     }
-  }, [onPiIncomplete]);
+  }, []);
 
   const restorePayments = useCallback(
     async (token?: string | null) => {
@@ -262,9 +261,11 @@ export default function AppShell() {
     setBusy(true);
     setError("");
     const origin = window.location.origin;
+    const authPromise = isPiInited()
+      ? forcePaymentsAuth(onPiIncomplete)
+      : bootPi().then(() => forcePaymentsAuth(onPiIncomplete));
     try {
-      await bootPi();
-      await ensurePaymentsAuth(onPiIncomplete);
+      await authPromise;
       setPayReady(true);
       await new Promise<void>((resolve, reject) => {
         let settled = false;
@@ -342,8 +343,9 @@ export default function AppShell() {
       return;
     }
     setBusy(true);
+    const authPromise = forcePaymentsAuth(onPiIncomplete);
     void bootPi()
-      .then(() => ensurePaymentsAuth(onPiIncomplete))
+      .then(() => authPromise)
       .then(async (auth) => {
         if (!auth?.accessToken) throw new Error("Pi n’a pas renvoyé de jeton.");
         const data = await api<{ session: string; pioneer: Pioneer }>("/api/auth/verify", null, {
