@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f5e6cc"/>
+      <stop offset="1" stop-color="#e59866"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <circle cx="256" cy="256" r="170" fill="#e74c3c"/>
+     <circle cx="256" cy="256" r="120" fill="#fff"/>
+     <circle cx="256" cy="256" r="78" fill="#e74c3c"/>
+     <circle cx="256" cy="256" r="36" fill="#f1c40f"/>
+     <circle cx="110" cy="120" r="36" fill="#111"/>
+     <circle cx="400" cy="380" r="30" fill="#f1c40f"/>
+</svg>

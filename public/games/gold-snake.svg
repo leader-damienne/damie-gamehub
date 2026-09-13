@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0b3d0b"/>
+      <stop offset="1" stop-color="#1e8449"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect x="40" y="40" width="432" height="432" rx="20" fill="#145a32"/>
+     <rect x="80" y="240" width="48" height="48" fill="#2ecc71"/>
+     <rect x="128" y="240" width="48" height="48" fill="#27ae60"/>
+     <rect x="176" y="240" width="48" height="48" fill="#2ecc71"/>
+     <rect x="224" y="240" width="48" height="48" fill="#27ae60"/>
+     <rect x="224" y="192" width="48" height="48" fill="#2ecc71"/>
+     <rect x="224" y="144" width="48" height="48" fill="#1e8449"/>
+     <circle cx="248" cy="160" r="8" fill="#fff"/>
+     <rect x="352" y="144" width="40" height="40" rx="8" fill="#f1c40f"/>
+</svg>

@@ -474,5 +474,5 @@ export function gameById(id: string) {
 }
 
 export function gameCover(id: string) {
-  return `/games/${id}.png`;
+  return `/games/${id}.svg`;
 }
