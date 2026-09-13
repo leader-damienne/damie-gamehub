@@ -1,4 +1,4 @@
-import { isWalletSeed } from "./pi-horizon";
+import { extractApiKey } from "./pi-horizon";
 
 function cleanHost(raw: string | null | undefined) {
   if (!raw) return "";
@@ -36,16 +36,14 @@ export function isMainnetHost(host: string) {
   return USE_MAINNET && host === "damiegamehub.com";
 }
 
-function envClean(name: string) {
-  return String((process.env as Record<string, string | undefined>)[name] || "")
-    .replace(/\s+/g, "")
-    .trim();
+function envRaw(name: string) {
+  return String((process.env as Record<string, string | undefined>)[name] || "").trim();
 }
 
 function firstApiKey(...names: string[]) {
   for (const name of names) {
-    const value = envClean(name);
-    if (value && !isWalletSeed(value)) return value;
+    const value = extractApiKey(envRaw(name));
+    if (value) return value;
   }
   return "";
 }

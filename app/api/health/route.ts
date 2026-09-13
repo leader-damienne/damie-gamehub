@@ -3,7 +3,7 @@ import { APP_NAME } from "@/lib/site";
 import { persistBackend, persistHint, persistReady, probePersist } from "@/lib/durable-store";
 import { hasApiKey, hasWalletSeed } from "@/lib/pi-server";
 import { isMainnetHost, requestHost } from "@/lib/pi-host";
-import { isWalletSeed } from "@/lib/pi-horizon";
+import { extractApiKey, extractWalletSeed, isWalletSeed } from "@/lib/pi-horizon";
 
 export const dynamic = "force-dynamic";
 
@@ -18,14 +18,16 @@ export async function GET(req: Request) {
   const host = requestHost(req);
   const mainnet = isMainnetHost(host);
   const mainnetKey = envValue("PI_API_KEY_MAINNET");
+  const apiKey = extractApiKey(mainnetKey);
+  const bundledSeed = extractWalletSeed(mainnetKey);
   const walletSeed = hasWalletSeed(mainnet);
-  const keyIsSeed = isWalletSeed(mainnetKey);
-  const hasDedicatedMainnet = Boolean(mainnetKey) && !keyIsSeed;
+  const keyIsSeed = isWalletSeed(mainnetKey) && !apiKey;
+  const hasDedicatedMainnet = Boolean(apiKey);
   const ready = persistReady();
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
-    code: "wallet-v3",
+    code: "wallet-v4",
     host,
     network: mainnet ? "mainnet" : "sandbox",
     paymentsReady: hasApiKey(req),
@@ -33,21 +35,23 @@ export async function GET(req: Request) {
     hasWalletSeed: walletSeed,
     persist: persistBackend(),
     persistReady: ready,
-    mainnetKeyChars: mainnetKey.length,
-    mainnetKeyStartsWith: mainnetKey ? mainnetKey[0] : "",
+    mainnetKeyChars: apiKey.length || mainnetKey.length,
+    mainnetKeyStartsWith: (apiKey || mainnetKey)[0] || "",
     mainnetKeyIsWalletSeed: keyIsSeed,
     hint: !mainnetKey
       ? "PI_API_KEY_MAINNET est vide sur cette version. Crayon → Rotate → colle l’API Key Mainnet → Deploy (pas Save version). Puis onglet Deployments : la version Active doit être celle-là."
       : keyIsSeed
-        ? "PI_API_KEY_MAINNET contient une graine de portefeuille (S…). Il faut l’API Key : develop.pinet.com → API Key → Confirm → copier → Rotate PI_API_KEY_MAINNET → Deploy."
+        ? "PI_API_KEY_MAINNET contient une graine de portefeuille (S…). Il faut la clé API et la graine : clé|S… (une seule variable) ou PI_WALLET_SEED à part."
         : !hasApiKey(req)
           ? "Clé API Mainnet absente. Vérifiez le Deploy."
           : !walletSeed
-            ? "Dépôts OK. Pour les retraits plus tard : graine S… du App Wallet Mainnet."
+            ? bundledSeed
+              ? "Graine vue dans PI_API_KEY_MAINNET mais pas encore lue. Rechargez après le deploy wallet-v4."
+              : "Dépôts OK. Retraits : Add PI_WALLET_SEED (graine S… App Wallet Mainnet), sans toucher PI_API_KEY_MAINNET. Si le nom disparaît : Rotate PI_API_KEY_MAINNET → collez cléAPI|graineS → Deploy."
             : !ready
               ? persistHint()
               : mainnet
-                ? "Mainnet prêt. Déposez un petit montant depuis https://damiegamehub.com"
+                ? "Mainnet prêt. Dépôts et retraits depuis https://damiegamehub.com"
                 : "Testnet (workers.dev) : dépôts et retraits en Test-π uniquement.",
   });
 }

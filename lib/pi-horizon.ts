@@ -5,10 +5,15 @@ const HORIZON = {
   testnet: { url: "https://api.testnet.minepi.com", passphrase: "Pi Testnet" },
 };
 
-function envValue(name: string) {
-  return String((process.env as Record<string, string | undefined>)[name] || "")
-    .replace(/\s+/g, "")
-    .trim();
+function envRaw(name: string) {
+  return String((process.env as Record<string, string | undefined>)[name] || "").trim();
+}
+
+function secretParts(value: string) {
+  return String(value || "")
+    .split(/[|\n;]+/)
+    .map((part) => part.replace(/\s+/g, "").trim())
+    .filter(Boolean);
 }
 
 export function isWalletSeed(value: string) {
@@ -18,17 +23,26 @@ export function isWalletSeed(value: string) {
   return seed.startsWith("S") && StrKey.isValidEd25519SecretSeed(seed);
 }
 
+/** API Key only. Ignores a seed S… even if both are stored in the same Cloudflare variable (`key|S…`). */
+export function extractApiKey(value: string) {
+  return secretParts(value).find((part) => !isWalletSeed(part)) || "";
+}
+
+export function extractWalletSeed(value: string) {
+  return secretParts(value).find((part) => isWalletSeed(part)) || "";
+}
+
 function firstWalletSeed(...names: string[]) {
   for (const name of names) {
-    const seed = envValue(name);
-    if (isWalletSeed(seed)) return seed;
+    const seed = extractWalletSeed(envRaw(name));
+    if (seed) return seed;
   }
   return "";
 }
 
 export function walletSeedForHost(mainnet: boolean) {
   if (mainnet) {
-    return firstWalletSeed("PI_WALLET_SEED_MAINNET", "PI_WALLET_SEED");
+    return firstWalletSeed("PI_WALLET_SEED_MAINNET", "PI_WALLET_SEED", "PI_API_KEY_MAINNET");
   }
   return firstWalletSeed("PI_WALLET_SEED_TESTNET", "PI_WALLET_SEED", "PI_API_KEY_MAINNET");
 }

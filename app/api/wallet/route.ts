@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Ajoutez la graine S… du App Wallet Mainnet. Si Cloudflare n’accepte pas de nouveau nom, collez-la dans PI_WALLET_SEED ou PI_API_KEY_MAINNET (crayon, puis Deploy). PI_API_KEY_MAINNET doit rester la clé API Mainnet si les dépôts doivent marcher.",
+            "Graine App Wallet Mainnet manquante. Add PI_WALLET_SEED (S…, 56 caractères) sans toucher PI_API_KEY_MAINNET. Si Cloudflare refuse un nouveau nom : crayon de PI_API_KEY_MAINNET, collez cléAPI|graineS (barre verticale), puis Deploy.",
         },
         { status: 503 },
       );
