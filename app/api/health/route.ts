@@ -3,6 +3,8 @@ import { APP_NAME } from "@/lib/site";
 import { persistBackend, persistHint, persistReady, probePersist } from "@/lib/durable-store";
 import { hasApiKey, hasWalletSeed } from "@/lib/pi-server";
 import { isMainnetHost, requestHost } from "@/lib/pi-host";
+import { isWalletSeed } from "@/lib/pi-horizon";
+import { isWalletSeed } from "@/lib/pi-horizon";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +20,7 @@ export async function GET(req: Request) {
   const mainnet = isMainnetHost(host);
   const mainnetKey = envValue("PI_API_KEY_MAINNET");
   const walletSeed = hasWalletSeed(mainnet);
-  const hasDedicatedMainnet = Boolean(mainnetKey) && !mainnetKey.startsWith("S");
+  const hasDedicatedMainnet = Boolean(mainnetKey) && !isWalletSeed(mainnetKey);
   const ready = persistReady();
   return NextResponse.json({
     app: APP_NAME,

@@ -1,3 +1,5 @@
+import { isWalletSeed } from "./pi-horizon";
+
 function cleanHost(raw: string | null | undefined) {
   if (!raw) return "";
   return raw.split(",")[0].trim().split(":")[0].replace(/^www\./, "").toLowerCase();
@@ -40,14 +42,10 @@ function envClean(name: string) {
     .trim();
 }
 
-function looksLikeSeed(value: string) {
-  return value.startsWith("S") && value.length >= 50;
-}
-
 function firstApiKey(...names: string[]) {
   for (const name of names) {
     const value = envClean(name);
-    if (value && !looksLikeSeed(value)) return value;
+    if (value && !isWalletSeed(value)) return value;
   }
   return "";
 }

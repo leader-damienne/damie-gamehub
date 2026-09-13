@@ -11,10 +11,17 @@ function envValue(name: string) {
     .trim();
 }
 
+export function isWalletSeed(value: string) {
+  const seed = String(value || "")
+    .replace(/\s+/g, "")
+    .trim();
+  return seed.startsWith("S") && StrKey.isValidEd25519SecretSeed(seed);
+}
+
 function firstWalletSeed(...names: string[]) {
   for (const name of names) {
     const seed = envValue(name);
-    if (seed.startsWith("S") && StrKey.isValidEd25519SecretSeed(seed)) return seed;
+    if (isWalletSeed(seed)) return seed;
   }
   return "";
 }
