@@ -8,13 +8,11 @@ import {
   api,
   bootPi,
   clearPaymentsAuth,
+  ensurePaymentsAuth,
   hasPiSdk,
   initPi,
-  isPiInited,
-  paymentsReadyFromTap,
   piError,
   piSandbox,
-  requestPaymentsAuth,
 } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
@@ -152,13 +150,15 @@ export default function AppShell() {
   const wakePayments = useCallback(async () => {
     if (!hasPiSdk()) return false;
     try {
-      if (!isPiInited()) await bootPi();
-      return isPiInited();
+      await bootPi();
+      await ensurePaymentsAuth(onPiIncomplete);
+      setPayReady(true);
+      return true;
     } catch {
       setPayReady(false);
       return false;
     }
-  }, []);
+  }, [onPiIncomplete]);
 
   const restorePayments = useCallback(
     async (token?: string | null) => {
@@ -259,25 +259,6 @@ export default function AppShell() {
       setError("Ouvrez ce lien dans le Pi Browser, pas Chrome.");
       return false;
     }
-    if (!isPiInited()) {
-      void bootPi();
-      setError("Pi n’est pas prêt. Attendez 2 secondes, puis touchez Déposer.");
-      return false;
-    }
-    if (!paymentsReadyFromTap()) {
-      setBusy(true);
-      setError("Fenêtre Pi : touchez Autoriser. Ensuite retouchez Déposer.");
-      try {
-        await requestPaymentsAuth(onPiIncomplete);
-        setPayReady(true);
-        setError("Autorisation OK. Touchez Déposer encore une fois : le paiement Pi s’ouvre.");
-      } catch (err) {
-        setError(piError(err));
-      } finally {
-        setBusy(false);
-      }
-      return false;
-    }
     setBusy(true);
     setError("");
     const origin = window.location.origin;
@@ -293,7 +274,7 @@ export default function AppShell() {
         finish(() =>
           reject(
             new Error(
-              `Pi n’a pas ouvert le paiement. Dans develop.pinet.com (app Testnet) l’URL doit être exactement ${origin}.`,
+              `Pi n’a pas ouvert le paiement. L’URL de l’app Testnet dans develop.pinet.com doit être ${origin}.`,
             ),
           ),
         );
@@ -344,14 +325,7 @@ export default function AppShell() {
       await paymentPromise;
       return true;
     } catch (err) {
-      const raw = piError(err);
-      if (/payments["']?\s*scope/i.test(raw)) {
-        clearPaymentsAuth();
-        setPayReady(false);
-        setError("Pi refuse le paiement (autorisation manquante). Touchez Déposer : Autoriser, puis Déposer une 2ᵉ fois.");
-      } else {
-        setError(raw);
-      }
+      setError(piError(err));
       return false;
     } finally {
       setBusy(false);
@@ -371,7 +345,7 @@ export default function AppShell() {
     }
     setBusy(true);
     void bootPi()
-      .then(() => requestPaymentsAuth(onPiIncomplete))
+      .then(() => ensurePaymentsAuth(onPiIncomplete))
       .then(async (auth) => {
         if (!auth?.accessToken) throw new Error("Pi n’a pas renvoyé de jeton.");
         const data = await api<{ session: string; pioneer: Pioneer }>("/api/auth/verify", null, {
@@ -860,10 +834,7 @@ export default function AppShell() {
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Déposer des {piLabel}</h4>
-                <p>
-                  1) Touchez Déposer → fenêtre Pi <b>Autoriser</b>. 2) Touchez Déposer encore → confirmer le
-                  paiement {piLabel}.
-                </p>
+                <p>Minimum {MIN_DEPOSIT} {piLabel}. Touchez Déposer : le paiement Pi s’ouvre tout de suite.</p>
                 {error && view === "wallet" && <div className="warn">{error}</div>}
                 <div className="amount-row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
                   {[0.1, 0.25, 0.5, 1].map((n) => (

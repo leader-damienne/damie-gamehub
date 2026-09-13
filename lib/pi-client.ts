@@ -106,34 +106,9 @@ export function startPiAuth(
 
 let paymentsAuth: Promise<PiAuthResult> | null = null;
 let incompleteHandler: ((payment: PiPaymentDTO) => void) | undefined;
-let paymentsFromTap = false;
 
 export function clearPaymentsAuth() {
   paymentsAuth = null;
-  paymentsFromTap = false;
-}
-
-export function paymentsReadyFromTap() {
-  return paymentsFromTap && Boolean(paymentsAuth);
-}
-
-/** Must run from a button tap. Opens the Pi Autoriser sheet. */
-export function requestPaymentsAuth(onIncomplete?: (payment: PiPaymentDTO) => void) {
-  if (onIncomplete) incompleteHandler = onIncomplete;
-  if (!hasPiSdk()) {
-    return Promise.reject(new Error("Ouvrez cette page dans le Pi Browser, pas Chrome."));
-  }
-  paymentsAuth = startPiAuth((payment) => incompleteHandler?.(payment), ["username", "payments"])
-    .then((auth) => {
-      paymentsFromTap = true;
-      return auth;
-    })
-    .catch((err) => {
-      paymentsAuth = null;
-      paymentsFromTap = false;
-      throw err;
-    });
-  return paymentsAuth;
 }
 
 /** Keep payments scope for this document. After a reload, call again — Pi usually restores silently. */
