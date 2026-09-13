@@ -4,7 +4,6 @@ import { persistBackend, persistHint, persistReady, probePersist } from "@/lib/d
 import { hasApiKey, hasWalletSeed } from "@/lib/pi-server";
 import { isMainnetHost, requestHost } from "@/lib/pi-host";
 import { isWalletSeed } from "@/lib/pi-horizon";
-import { isWalletSeed } from "@/lib/pi-horizon";
 
 export const dynamic = "force-dynamic";
 
@@ -20,12 +19,13 @@ export async function GET(req: Request) {
   const mainnet = isMainnetHost(host);
   const mainnetKey = envValue("PI_API_KEY_MAINNET");
   const walletSeed = hasWalletSeed(mainnet);
-  const hasDedicatedMainnet = Boolean(mainnetKey) && !isWalletSeed(mainnetKey);
+  const keyIsSeed = isWalletSeed(mainnetKey);
+  const hasDedicatedMainnet = Boolean(mainnetKey) && !keyIsSeed;
   const ready = persistReady();
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
-    code: "wallet-v2",
+    code: "wallet-v3",
     host,
     network: mainnet ? "mainnet" : "sandbox",
     paymentsReady: hasApiKey(req),
@@ -33,16 +33,21 @@ export async function GET(req: Request) {
     hasWalletSeed: walletSeed,
     persist: persistBackend(),
     persistReady: ready,
-    hint: mainnet && !hasDedicatedMainnet
-      ? "Dépôts Mainnet : crayon de PI_API_KEY_MAINNET, collez la clé API du projet Mainnet (pas une graine S…, pas la clé Testnet), puis Deploy."
-      : !walletSeed
-        ? mainnet
-          ? "Retraits : ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings."
-          : "Onglet Deployments : Retry / Deploy la dernière version. Puis crayon PI_API_KEY_MAINNET, graine S…, bouton Deploy (pas seulement Save version)."
-        : !ready
-          ? persistHint()
-          : mainnet
-            ? "Mainnet prêt. Déposez un petit montant depuis https://damiegamehub.com"
-            : "Testnet (workers.dev) : dépôts et retraits en Test-π uniquement.",
+    mainnetKeyChars: mainnetKey.length,
+    mainnetKeyStartsWith: mainnetKey ? mainnetKey[0] : "",
+    mainnetKeyIsWalletSeed: keyIsSeed,
+    hint: !mainnetKey
+      ? "PI_API_KEY_MAINNET est vide sur cette version. Crayon → Rotate → colle l’API Key Mainnet → Deploy (pas Save version). Puis onglet Deployments : la version Active doit être celle-là."
+      : keyIsSeed
+        ? "PI_API_KEY_MAINNET contient une graine de portefeuille (S…). Il faut l’API Key : develop.pinet.com → API Key → Confirm → copier → Rotate PI_API_KEY_MAINNET → Deploy."
+        : !hasApiKey(req)
+          ? "Clé API Mainnet absente. Vérifiez le Deploy."
+          : !walletSeed
+            ? "Dépôts OK. Pour les retraits plus tard : graine S… du App Wallet Mainnet."
+            : !ready
+              ? persistHint()
+              : mainnet
+                ? "Mainnet prêt. Déposez un petit montant depuis https://damiegamehub.com"
+                : "Testnet (workers.dev) : dépôts et retraits en Test-π uniquement.",
   });
 }
