@@ -61,6 +61,11 @@ img {
   box-shadow: var(--shadow);
 }
 
+.phone:has(.game-stage) {
+  overflow: hidden;
+  background: transparent;
+}
+
 .scroll {
   height: calc(100dvh - var(--nav));
   overflow-y: auto;
@@ -622,8 +627,26 @@ img {
 
 .game-stage {
   height: 100dvh;
-  background: #050505;
+  background: linear-gradient(180deg, var(--game-accent, #1a365d), #0f2744);
   position: relative;
+}
+
+.game-stage .pill {
+  background: color-mix(in srgb, var(--game-accent, #63b3ed) 22%, #ffffff);
+  border-color: var(--game-accent, #63b3ed);
+  color: #111;
+}
+
+.game-stage .gold-btn {
+  color: #fff;
+  background: var(--game-player, #38a169);
+  box-shadow: 0 8px 20px color-mix(in srgb, var(--game-player, #38a169) 35%, transparent);
+}
+
+.game-stage .ghost-btn {
+  color: #fff;
+  background: rgba(0, 0, 0, 0.38);
+  border-color: rgba(255, 255, 255, 0.35);
 }
 
 .game-stage canvas,
@@ -713,15 +736,15 @@ img {
   border-radius: 12px;
   font-size: 22px;
   font-weight: 800;
-  background: #161616;
-  color: var(--gold-2);
+  background: var(--game-lane, #161616);
+  color: var(--game-accent, #63b3ed);
   display: grid;
   place-items: center;
   min-height: 56px;
 }
 
 .tile.v0 {
-  background: #121212;
+  background: var(--game-lane, #121212);
   color: transparent;
 }
 
@@ -736,12 +759,12 @@ img {
   width: 220px;
   height: 220px;
   border-radius: 50%;
-  border: 6px solid var(--gold);
-  background: radial-gradient(circle at 35% 30%, #f0d56a, #8a6a1a 70%);
-  color: #111;
+  border: 6px solid var(--game-accent, #e67e22);
+  background: radial-gradient(circle at 35% 30%, var(--game-accent-2, #f1c40f), var(--game-player, #e67e22) 70%);
+  color: #fff;
   font-size: 22px;
   font-weight: 900;
-  box-shadow: 0 0 40px rgba(212, 175, 55, 0.28);
+  box-shadow: 0 0 40px color-mix(in srgb, var(--game-player, #e67e22) 40%, transparent);
 }
 
 .legal {

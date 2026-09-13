@@ -9,7 +9,16 @@ export type View =
   | "profile"
   | "privacy";
 
-export type GameCategory = "arcade" | "puzzle" | "action" | "competitive" | "casual" | "racing" | "combat" | "flight";
+export type GameCategory =
+  | "arcade"
+  | "puzzle"
+  | "action"
+  | "competitive"
+  | "casual"
+  | "racing"
+  | "combat"
+  | "flight"
+  | "sport";
 
 export type GameBoardKind =
   | "catch"

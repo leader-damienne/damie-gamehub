@@ -1,3 +1,4 @@
+import { themeFor } from "./game-theme";
 import type { GameDef, ShopItem, TournamentDef } from "./types";
 
 export const GAMES: GameDef[] = [
@@ -6,7 +7,7 @@ export const GAMES: GameDef[] = [
     title: "Crown Catch",
     tagline: "Attrapez l'or, évitez les pièges",
     category: "arcade",
-    accent: "#d4af37",
+    accent: themeFor("crown-catch").accent,
     howTo: "Glissez le panier. Attrapez l’or, évitez les boules noires.",
     rules: [
       "Glissez le panier en bas de l’écran.",
@@ -20,7 +21,7 @@ export const GAMES: GameDef[] = [
     title: "Reflex Ring",
     tagline: "Tapez dans la zone d'or",
     category: "competitive",
-    accent: "#f0d56a",
+    accent: themeFor("reflex-ring").accent,
     howTo: "Touchez l’écran quand l’anneau est sur la zone d’or.",
     rules: [
       "L’anneau se resserre vers le centre.",
@@ -34,7 +35,7 @@ export const GAMES: GameDef[] = [
     title: "Memory Vault",
     tagline: "Mémorisez les couronnes",
     category: "puzzle",
-    accent: "#c9a227",
+    accent: themeFor("memory-vault").accent,
     howTo: "Retournez deux cartes identiques jusqu’à tout vider.",
     rules: [
       "Touchez une carte, puis une seconde.",
@@ -48,7 +49,7 @@ export const GAMES: GameDef[] = [
     title: "Orbit Dash",
     tagline: "Survivez dans l'orbite",
     category: "action",
-    accent: "#e8c547",
+    accent: themeFor("orbit-dash").accent,
     howTo: "Touchez gauche / droite pour tourner. Prenez l’or, évitez les rochers.",
     rules: [
       "Touchez la gauche ou la droite pour changer d’orbite.",
@@ -62,7 +63,7 @@ export const GAMES: GameDef[] = [
     title: "Stack King",
     tagline: "Empilez parfaitement",
     category: "casual",
-    accent: "#d4af37",
+    accent: themeFor("stack-king").accent,
     howTo: "Touchez pour poser chaque barre le plus au centre possible.",
     rules: [
       "Touchez pour poser la barre en mouvement.",
@@ -76,7 +77,7 @@ export const GAMES: GameDef[] = [
     title: "Pulse Tap",
     tagline: "Rythme et précision",
     category: "competitive",
-    accent: "#f5d76e",
+    accent: themeFor("pulse-tap").accent,
     howTo: "Appuyez sur la voie quand la barre d’or passe la ligne.",
     rules: [
       "Les barres d’or descendent sur trois voies.",
@@ -90,7 +91,7 @@ export const GAMES: GameDef[] = [
     title: "Grid Merge",
     tagline: "Fusionnez les tuiles d'or",
     category: "puzzle",
-    accent: "#b8962e",
+    accent: themeFor("grid-merge").accent,
     howTo: "Glissez pour fusionner les mêmes nombres.",
     rules: [
       "Glissez dans une direction pour déplacer les tuiles.",
@@ -104,7 +105,7 @@ export const GAMES: GameDef[] = [
     title: "Gold Slash",
     tagline: "Tranchez l'or en vol",
     category: "action",
-    accent: "#d4af37",
+    accent: themeFor("gold-slash").accent,
     howTo: "Balayez les orbes d’or. Ne touchez pas les noirs.",
     rules: [
       "Balayez l’écran pour trancher les orbes d’or.",
@@ -118,7 +119,7 @@ export const GAMES: GameDef[] = [
     title: "King Tap",
     tagline: "Combo de taps royaux",
     category: "casual",
-    accent: "#f0d56a",
+    accent: themeFor("king-tap").accent,
     howTo: "Tapez le plus vite possible pendant 15 secondes.",
     rules: [
       "Tapez le plus vite possible pendant 15 secondes.",
@@ -132,7 +133,7 @@ export const GAMES: GameDef[] = [
     title: "Maze Crown",
     tagline: "Collectez avant le garde",
     category: "arcade",
-    accent: "#c9a227",
+    accent: themeFor("maze-crown").accent,
     howTo: "Glissez pour bouger. Ramassez l’or avant le garde.",
     rules: [
       "Glissez pour déplacer le pion dans le labyrinthe.",
@@ -146,7 +147,7 @@ export const GAMES: GameDef[] = [
     title: "Lane Rush",
     tagline: "Trois voies, un seul panier",
     category: "arcade",
-    accent: "#d4af37",
+    accent: themeFor("lane-rush").accent,
     howTo: "Touchez gauche, centre ou droite. Prenez l’or, évitez les pièges.",
     rules: [
       "Touchez le tiers gauche, centre ou droit pour changer de voie.",
@@ -160,7 +161,7 @@ export const GAMES: GameDef[] = [
     title: "Target Crown",
     tagline: "Tapez l'or avant qu'il disparaisse",
     category: "action",
-    accent: "#e8c547",
+    accent: themeFor("target-crown").accent,
     howTo: "Touchez les cibles d’or. Évitez les noires. 5 or manqués = fin.",
     rules: [
       "Touchez uniquement les cibles d’or.",
@@ -174,7 +175,7 @@ export const GAMES: GameDef[] = [
     title: "Gold Snake",
     tagline: "Grandissez, ne vous mordez pas",
     category: "arcade",
-    accent: "#c9a227",
+    accent: themeFor("gold-snake").accent,
     howTo: "Touchez pour tourner. Mangez l’or, évitez les murs et votre corps.",
     rules: [
       "Touchez un côté de l’écran pour changer de direction.",
@@ -188,7 +189,7 @@ export const GAMES: GameDef[] = [
     title: "Gap Flyer",
     tagline: "Passez entre les piliers d'or",
     category: "action",
-    accent: "#f0d56a",
+    accent: themeFor("gap-flyer").accent,
     howTo: "Touchez pour voler. Passez dans l’ouverture, évitez les piliers.",
     rules: [
       "Touchez l’écran pour monter.",
@@ -202,7 +203,7 @@ export const GAMES: GameDef[] = [
     title: "Color Rush",
     tagline: "Touchez la bonne couleur",
     category: "puzzle",
-    accent: "#b8962e",
+    accent: themeFor("color-rush").accent,
     howTo: "Touchez la couleur affichée avant la fin du temps. 3 vies.",
     rules: [
       "Regardez la couleur demandée en haut.",
@@ -216,7 +217,7 @@ export const GAMES: GameDef[] = [
     title: "Simon Crown",
     tagline: "Reproduisez la séquence royale",
     category: "casual",
-    accent: "#f5d76e",
+    accent: themeFor("simon-crown").accent,
     howTo: "Mémorisez la séquence allumée, puis rejouez-la dans l’ordre.",
     rules: [
       "Regardez les pads s’allumer.",
@@ -230,7 +231,7 @@ export const GAMES: GameDef[] = [
     title: "Moto Rush",
     tagline: "Trois voies, une moto d’or",
     category: "racing",
-    accent: "#d4af37",
+    accent: themeFor("moto-rush").accent,
     howTo: "Touchez gauche, centre ou droite. Prenez l’or, évitez les voitures.",
     rules: [
       "Touchez un tiers de l’écran pour changer de voie.",
@@ -244,7 +245,7 @@ export const GAMES: GameDef[] = [
     title: "Wheelie Gold",
     tagline: "Tenez la roue arrière",
     category: "racing",
-    accent: "#f0d56a",
+    accent: themeFor("wheelie-gold").accent,
     howTo: "Maintenez pour cabrer et passer les trous. Relâchez pour atterrir.",
     rules: [
       "Maintenez l’écran pour cabrer la moto.",
@@ -258,7 +259,7 @@ export const GAMES: GameDef[] = [
     title: "Gold Rally",
     tagline: "Glissez pour éviter le trafic",
     category: "racing",
-    accent: "#e8c547",
+    accent: themeFor("gold-rally").accent,
     howTo: "Glissez pour diriger la voiture. Évitez le trafic, prenez l’or.",
     rules: [
       "Glissez le doigt pour déplacer la voiture.",
@@ -272,7 +273,7 @@ export const GAMES: GameDef[] = [
     title: "Nitro Crown",
     tagline: "Sautez les fosses",
     category: "racing",
-    accent: "#c9a227",
+    accent: themeFor("nitro-crown").accent,
     howTo: "Touchez pour sauter au bon moment au-dessus des trous.",
     rules: [
       "Touchez pour faire sauter la voiture.",
@@ -286,7 +287,7 @@ export const GAMES: GameDef[] = [
     title: "Ring Fighter",
     tagline: "Bloquez, puis frappez",
     category: "combat",
-    accent: "#d36a6a",
+    accent: themeFor("ring-fighter").accent,
     howTo: "Gauche = bloquer, droite = frapper. Bloquez l’attaque rouge.",
     rules: [
       "L’écran rougit juste avant le coup adverse.",
@@ -300,7 +301,7 @@ export const GAMES: GameDef[] = [
     title: "Turret Siege",
     tagline: "Défendez la couronne",
     category: "combat",
-    accent: "#b8962e",
+    accent: themeFor("turret-siege").accent,
     howTo: "Touchez l’écran pour tirer vers les bombes. N’en laissez aucune passer.",
     rules: [
       "Touchez une cible pour tirer le canon.",
@@ -314,7 +315,7 @@ export const GAMES: GameDef[] = [
     title: "Tank Push",
     tagline: "Canon d’or contre les rochers",
     category: "combat",
-    accent: "#8a6a1a",
+    accent: themeFor("tank-push").accent,
     howTo: "Glissez pour viser, maintenez pour tirer sans arrêt.",
     rules: [
       "Glissez pour déplacer le tank.",
@@ -328,7 +329,7 @@ export const GAMES: GameDef[] = [
     title: "Sky Ace",
     tagline: "Pilotez entre les rafales",
     category: "flight",
-    accent: "#8ab4d4",
+    accent: themeFor("sky-ace").accent,
     howTo: "Glissez haut / bas. Évitez les rafales, ramassez l’or.",
     rules: [
       "Glissez verticalement pour piloter.",
@@ -342,7 +343,7 @@ export const GAMES: GameDef[] = [
     title: "Jet Strike",
     tagline: "Chasseurs contre chasseurs",
     category: "flight",
-    accent: "#6a8aaa",
+    accent: themeFor("jet-strike").accent,
     howTo: "Glissez pour viser, maintenez pour mitrailler les jets ennemis.",
     rules: [
       "Glissez pour monter ou descendre.",
@@ -356,7 +357,7 @@ export const GAMES: GameDef[] = [
     title: "Hover Dash",
     tagline: "Hoverbike sur trois rails",
     category: "flight",
-    accent: "#f0d56a",
+    accent: themeFor("hover-dash").accent,
     howTo: "Touchez une voie. Or = points, bombes = crash.",
     rules: [
       "Touchez gauche, centre ou droite.",
@@ -365,12 +366,139 @@ export const GAMES: GameDef[] = [
     ],
     perks: ["Moto volante, réflexes d’arcade.", "Idéal pour les missions rapides."],
   },
+  {
+    id: "bike-dash",
+    title: "Bike Dash",
+    tagline: "Vélo, trois voies, zéro chute",
+    category: "sport",
+    accent: themeFor("bike-dash").accent,
+    howTo: "Touchez gauche, centre ou droite. Prenez les bonus, évitez les obstacles.",
+    rules: [
+      "Touchez un tiers de l’écran pour changer de voie.",
+      "Ramassez les bonus jaunes.",
+      "Un obstacle sur votre voie termine la course.",
+    ],
+    perks: ["Course à vélo, réflexes purs.", "Parfait pour enchaîner les missions."],
+  },
+  {
+    id: "moto-cross",
+    title: "Moto Cross",
+    tagline: "Sautez les buttes de terre",
+    category: "racing",
+    accent: themeFor("moto-cross").accent,
+    howTo: "Touchez pour sauter au-dessus des fosses. Attrapez les bonus en l’air.",
+    rules: [
+      "Touchez pour cabrer et sauter.",
+      "Passez les trous sans atterrir dedans.",
+      "Les pièces en l’air rapportent plus.",
+    ],
+    perks: ["Moto dirt, timing de saut.", "Les enchaînements boostent le score."],
+  },
+  {
+    id: "loop-ace",
+    title: "Loop Ace",
+    tagline: "Enfilez les anneaux en vol",
+    category: "flight",
+    accent: themeFor("loop-ace").accent,
+    howTo: "Glissez haut / bas. Passez dans les anneaux, n’en ratez pas 5.",
+    rules: [
+      "Glissez verticalement pour piloter.",
+      "Traversez le centre de chaque anneau.",
+      "Cinq anneaux ratés terminent le vol.",
+    ],
+    perks: ["Acrobaties aériennes.", "Le rythme accélère avec le score."],
+  },
+  {
+    id: "knock-out",
+    title: "Knock Out",
+    tagline: "Frappez au vert, gardez au rouge",
+    category: "combat",
+    accent: themeFor("knock-out").accent,
+    howTo: "Touchez seulement quand l’écran est vert. Au rouge, n’attaquez pas.",
+    rules: [
+      "Vert : frappez pour marquer.",
+      "Rouge : une attaque ou un coup encaissé retire une vie.",
+      "Trois vies perdues : K.O.",
+    ],
+    perks: ["Boxe de timing, parties courtes.", "Les enchaînements verts scorent fort."],
+  },
+  {
+    id: "ball-keep",
+    title: "Ball Keep",
+    tagline: "Gardez le ballon en l’air",
+    category: "sport",
+    accent: themeFor("ball-keep").accent,
+    howTo: "Touchez sous le ballon pour le renvoyer. S’il touche le sol, c’est fini.",
+    rules: [
+      "Touchez près du ballon pour le faire rebondir.",
+      "Chaque rebond marque.",
+      "Le sol = fin de partie.",
+    ],
+    perks: ["Jonglage simple et addictif.", "Plus ça dure, plus les microns montent."],
+  },
+  {
+    id: "foot-strike",
+    title: "Foot Strike",
+    tagline: "Tirez loin du gardien",
+    category: "sport",
+    accent: themeFor("foot-strike").accent,
+    howTo: "Touchez gauche, centre ou droite pour tirer. Visez où le gardien n’est pas.",
+    rules: [
+      "Choisissez un côté du but.",
+      "Si le gardien est ailleurs : but.",
+      "Cinq arrêts terminent le match.",
+    ],
+    perks: ["Penaltys arcade.", "Idéal pour le classement sport."],
+  },
+  {
+    id: "volley-spike",
+    title: "Volley Spike",
+    tagline: "Smash au bon moment",
+    category: "sport",
+    accent: themeFor("volley-spike").accent,
+    howTo: "Attendez le ballon de votre côté, puis touchez pour smasher.",
+    rules: [
+      "Le ballon arrive de l’adversaire.",
+      "Touchez quand il est dans votre zone.",
+      "Cinq fautes terminent le set.",
+    ],
+    perks: ["Timing de filet.", "Les smashs enchaînés explosent le score."],
+  },
+  {
+    id: "hand-goal",
+    title: "Hand Goal",
+    tagline: "Lancez dans le but",
+    category: "sport",
+    accent: themeFor("hand-goal").accent,
+    howTo: "Touchez gauche, centre ou droite pour lancer. Évitez le gardien.",
+    rules: [
+      "Choisissez un angle du but.",
+      "Un lancer hors gardien marque.",
+      "Cinq arrêts terminent la partie.",
+    ],
+    perks: ["Handball indoor, tirs rapides.", "Bonne source de microns sans mise."],
+  },
+  {
+    id: "sipa-kick",
+    title: "Sipa Kick",
+    tagline: "Renvoyez le rattan au filet",
+    category: "sport",
+    accent: themeFor("sipa-kick").accent,
+    howTo: "Touchez quand le ballon tressé arrive chez vous. Gardez l’échange.",
+    rules: [
+      "Le sipa arrive de l’autre côté du filet.",
+      "Touchez dans votre zone pour renvoyer.",
+      "Cinq ballons au sol terminent l’échange.",
+    ],
+    perks: ["Jeu de pied, rythme tropical.", "Chaque rallye allonge le score."],
+  },
 ];
 
 export const CATEGORIES: { id: "all" | GameDef["category"]; label: string }[] = [
   { id: "all", label: "Tous" },
   { id: "arcade", label: "Arcade" },
   { id: "racing", label: "Course" },
+  { id: "sport", label: "Sport" },
   { id: "combat", label: "Combat" },
   { id: "flight", label: "Vol" },
   { id: "puzzle", label: "Puzzle" },
@@ -435,6 +563,22 @@ export const TOURNAMENTS: TournamentDef[] = [
     entryPi: 0.1,
     prizeLabel: "Ceinture royale",
     durationHours: 48,
+  },
+  {
+    id: "foot-cup",
+    title: "Foot Cup",
+    gameId: "foot-strike",
+    entryPi: 0.05,
+    prizeLabel: "Ballon d’or",
+    durationHours: 36,
+  },
+  {
+    id: "sipa-open",
+    title: "Sipa Open",
+    gameId: "sipa-kick",
+    entryPi: 0,
+    prizeLabel: "Filet royal",
+    durationHours: 24,
   },
 ];
 

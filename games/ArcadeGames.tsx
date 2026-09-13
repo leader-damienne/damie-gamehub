@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { rgba, themeFor } from "@/lib/game-theme";
 import GameCanvas from "./GameCanvas";
 import { drawBasket, drawBomb, drawCoin, drawRock, drawShip, paintBoard } from "./sprites";
 
@@ -9,7 +10,11 @@ type RunProps = {
   onOver: (score: number) => void;
 };
 
+const STACK = ["#e74c3c", "#f39c12", "#27ae60", "#2980b9", "#9b59b6"];
+const SLASH = ["#ff9f1c", "#2ecc71", "#e74c3c"];
+
 export function CrownCatch({ onScore, onOver }: RunProps) {
+  const T = themeFor("crown-catch");
   const state = useRef({
     x: 0.5,
     items: [] as { x: number; y: number; gold: boolean; vy: number }[],
@@ -56,18 +61,19 @@ export function CrownCatch({ onScore, onOver }: RunProps) {
           }
           return it.y < 1.05;
         });
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         for (const it of s.items) {
-          if (it.gold) drawCoin(ctx, it.x * w, it.y * h, 14);
-          else drawBomb(ctx, it.x * w, it.y * h, 13);
+          if (it.gold) drawCoin(ctx, it.x * w, it.y * h, 14, T.collect);
+          else drawBomb(ctx, it.x * w, it.y * h, 13, T.collect);
         }
-        drawBasket(ctx, s.x * w, h - 42);
+        drawBasket(ctx, s.x * w, h - 42, T.player);
       }}
     />
   );
 }
 
 export function OrbitDash({ onScore, onOver }: RunProps) {
+  const T = themeFor("orbit-dash");
   const state = useRef({
     a: 0,
     dir: 0,
@@ -97,8 +103,8 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
         const cx = w / 2;
         const cy = h / 2;
         const orbit = Math.min(w, h) * 0.32;
-        paintBoard(ctx, w, h);
-        ctx.strokeStyle = "rgba(212,175,55,0.25)";
+        paintBoard(ctx, w, h, T);
+        ctx.strokeStyle = rgba(T.accent, 0.45);
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.arc(cx, cy, orbit, 0, Math.PI * 2);
@@ -110,8 +116,8 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
           return arr.filter((o) => {
             const x = cx + Math.cos(o.a) * o.r * Math.min(w, h);
             const y = cy + Math.sin(o.a) * o.r * Math.min(w, h);
-            if (gold) drawCoin(ctx, x, y, 8);
-            else drawRock(ctx, x, y, 12);
+            if (gold) drawCoin(ctx, x, y, 8, T.collect);
+            else drawRock(ctx, x, y, 12, T.hazard);
             const hit = Math.hypot(x - px, y - py) < 18;
             if (hit && gold) {
               s.score += 25;
@@ -128,15 +134,16 @@ export function OrbitDash({ onScore, onOver }: RunProps) {
         };
         s.rocks = move(s.rocks, false);
         s.coins = move(s.coins, true);
-        drawShip(ctx, px, py, s.a);
+        drawShip(ctx, px, py, s.a, T.player);
       }}
     />
   );
 }
 
 export function GoldSlash({ onScore, onOver }: RunProps) {
+  const T = themeFor("gold-slash");
   const state = useRef({
-    orbs: [] as { x: number; y: number; vx: number; vy: number; gold: boolean }[],
+    orbs: [] as { x: number; y: number; vx: number; vy: number; gold: boolean; tint: string }[],
     score: 0,
     t: 0,
     last: { x: 0, y: 0, on: false },
@@ -182,15 +189,16 @@ export function GoldSlash({ onScore, onOver }: RunProps) {
             vx: (Math.random() - 0.5) * 0.25,
             vy: -0.85 - Math.random() * 0.2,
             gold: Math.random() > 0.22,
+            tint: SLASH[Math.floor(Math.random() * SLASH.length)],
           });
         }
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         s.orbs.forEach((o) => {
           o.vy += dt * 0.9;
           o.x += o.vx * dt;
           o.y += o.vy * dt;
-          if (o.gold) drawCoin(ctx, o.x * w, o.y * h, 16);
-          else drawBomb(ctx, o.x * w, o.y * h, 15);
+          if (o.gold) drawCoin(ctx, o.x * w, o.y * h, 16, o.tint);
+          else drawBomb(ctx, o.x * w, o.y * h, 15, T.collect);
         });
         s.orbs = s.orbs.filter((o) => {
           if (o.y < 1.2) return true;
@@ -209,6 +217,7 @@ export function GoldSlash({ onScore, onOver }: RunProps) {
 }
 
 export function StackKing({ onScore, onOver }: RunProps) {
+  const T = themeFor("stack-king");
   const state = useRef({
     blocks: [{ x: 0.5, w: 0.46 }],
     cur: { x: 0.1, w: 0.46, dir: 1 },
@@ -245,14 +254,14 @@ export function StackKing({ onScore, onOver }: RunProps) {
             onScore(s.score);
           }
         }
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         const base = h - 80;
         s.blocks.forEach((b, i) => {
-          ctx.fillStyle = i % 2 ? "#d4af37" : "#f0d56a";
+          ctx.fillStyle = STACK[i % STACK.length];
           const y = base - i * 18;
           ctx.fillRect((b.x - b.w / 2) * w, y, b.w * w, 16);
         });
-        ctx.fillStyle = "#fff2b0";
+        ctx.fillStyle = T.collect;
         ctx.fillRect((s.cur.x - s.cur.w / 2) * w, base - s.blocks.length * 18, s.cur.w * w, 16);
       }}
     />
@@ -260,6 +269,7 @@ export function StackKing({ onScore, onOver }: RunProps) {
 }
 
 export function ReflexRing({ onScore, onOver }: RunProps) {
+  const T = themeFor("reflex-ring");
   const [pulse, setPulse] = useState(0);
   const score = useRef(0);
   const lives = useRef(3);
@@ -308,19 +318,20 @@ export function ReflexRing({ onScore, onOver }: RunProps) {
       }}
     >
       <svg width="260" height="260" viewBox="0 0 260 260">
-        <circle cx="130" cy="130" r="100" fill="none" stroke="#222" strokeWidth="18" />
+        <circle cx="130" cy="130" r="100" fill="none" stroke={T.lane} strokeWidth="18" />
         <circle
           cx="130"
           cy="130"
           r="100"
           fill="none"
-          stroke="#d4af37"
+          stroke={T.accent}
           strokeWidth="18"
           strokeDasharray={`${40 + band.current * 20} 999`}
           transform={`rotate(${band.current * 260} 130 130)`}
         />
-        <circle cx="130" cy="130" r={20 + pulse * 80} fill="none" stroke="#f0d56a" strokeWidth="6" />
-        <text x="130" y="136" textAnchor="middle" fill="#f6f1e4" fontSize="18">
+        <circle cx="130" cy="130" r={20 + pulse * 80} fill="none" stroke={T.accent2} strokeWidth="6" />
+        <circle cx="130" cy="130" r="22" fill={T.player} />
+        <text x="130" y="136" textAnchor="middle" fill="#1b0840" fontSize="16" fontWeight="700">
           TAP
         </text>
       </svg>

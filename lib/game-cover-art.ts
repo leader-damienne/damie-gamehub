@@ -180,5 +180,68 @@ export const GAME_COVER_ART: Record<string, { inner: string; bg: [string, string
       "#1a0033",
       "#4a0072"
     ]
+  },
+  "bike-dash": {
+    "inner": "<rect x=\"0\" y=\"330\" width=\"512\" height=\"182\" fill=\"#a04000\"/>\n     <rect x=\"0\" y=\"330\" width=\"512\" height=\"18\" fill=\"#27ae60\"/>\n     <circle cx=\"190\" cy=\"360\" r=\"28\" fill=\"#111\"/>\n     <circle cx=\"310\" cy=\"360\" r=\"28\" fill=\"#111\"/>\n     <path d=\"M190 360 L256 280 L310 360\" fill=\"none\" stroke=\"#f1c40f\" stroke-width=\"12\"/>\n     <circle cx=\"250\" cy=\"240\" r=\"22\" fill=\"#f5cba7\"/>\n     <rect x=\"232\" y=\"258\" width=\"40\" height=\"44\" fill=\"#e74c3c\"/>\n     <circle cx=\"90\" cy=\"160\" r=\"36\" fill=\"#1e8449\"/>\n     <circle cx=\"420\" cy=\"120\" r=\"28\" fill=\"#145a32\"/>",
+    "bg": [
+      "#7dcea0",
+      "#1e8449"
+    ]
+  },
+  "moto-cross": {
+    "inner": "<path d=\"M0 360 Q 120 220 240 340 T 512 280 V 512 H 0z\" fill=\"#a04000\"/>\n     <circle cx=\"210\" cy=\"340\" r=\"26\" fill=\"#111\"/>\n     <circle cx=\"310\" cy=\"300\" r=\"26\" fill=\"#111\"/>\n     <path d=\"M200 330 l90 -70 40 16 -70 80z\" fill=\"#e67e22\"/>\n     <circle cx=\"250\" cy=\"250\" r=\"18\" fill=\"#5dade2\"/>\n     <circle cx=\"400\" cy=\"160\" r=\"16\" fill=\"#f4d03f\"/>",
+    "bg": [
+      "#5dade2",
+      "#d35400"
+    ]
+  },
+  "loop-ace": {
+    "inner": "<ellipse cx=\"340\" cy=\"220\" rx=\"70\" ry=\"110\" fill=\"none\" stroke=\"#f4d03f\" stroke-width=\"18\"/>\n     <ellipse cx=\"180\" cy=\"300\" rx=\"50\" ry=\"80\" fill=\"none\" stroke=\"#e74c3c\" stroke-width=\"14\"/>\n     <ellipse cx=\"230\" cy=\"240\" rx=\"90\" ry=\"22\" fill=\"#ecf0f1\"/>\n     <rect x=\"210\" y=\"226\" width=\"70\" height=\"22\" fill=\"#e74c3c\"/>\n     <polygon points=\"280,237 340,220 340,254\" fill=\"#e74c3c\"/>",
+    "bg": [
+      "#85c1e9",
+      "#1a5276"
+    ]
+  },
+  "knock-out": {
+    "inner": "<rect x=\"70\" y=\"300\" width=\"372\" height=\"28\" fill=\"#922b21\"/>\n     <circle cx=\"180\" cy=\"230\" r=\"64\" fill=\"#f5cba7\"/>\n     <circle cx=\"340\" cy=\"230\" r=\"64\" fill=\"#edbb99\"/>\n     <circle cx=\"140\" cy=\"250\" r=\"28\" fill=\"#e74c3c\"/>\n     <circle cx=\"380\" cy=\"250\" r=\"28\" fill=\"#e74c3c\"/>\n     <rect x=\"160\" y=\"290\" width=\"50\" height=\"90\" fill=\"#c0392b\"/>\n     <rect x=\"310\" y=\"290\" width=\"50\" height=\"90\" fill=\"#1a5276\"/>",
+    "bg": [
+      "#1c2833",
+      "#7b241c"
+    ]
+  },
+  "ball-keep": {
+    "inner": "<rect x=\"0\" y=\"380\" width=\"512\" height=\"132\" fill=\"#d68910\"/>\n     <circle cx=\"256\" cy=\"160\" r=\"54\" fill=\"#e74c3c\"/>\n     <circle cx=\"236\" cy=\"142\" r=\"12\" fill=\"#fff\" opacity=\".5\"/>\n     <circle cx=\"256\" cy=\"300\" r=\"28\" fill=\"#f5cba7\"/>\n     <rect x=\"232\" y=\"328\" width=\"48\" height=\"70\" fill=\"#2980b9\"/>",
+    "bg": [
+      "#fdebd0",
+      "#e67e22"
+    ]
+  },
+  "foot-strike": {
+    "inner": "<rect x=\"40\" y=\"80\" width=\"432\" height=\"280\" fill=\"none\" stroke=\"#fff\" stroke-width=\"12\"/>\n     <line x1=\"256\" y1=\"80\" x2=\"256\" y2=\"360\" stroke=\"#fff\" stroke-width=\"8\"/>\n     <circle cx=\"256\" cy=\"220\" r=\"50\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\"/>\n     <circle cx=\"256\" cy=\"400\" r=\"36\" fill=\"#fff\"/>\n     <circle cx=\"256\" cy=\"400\" r=\"12\" fill=\"#111\"/>\n     <rect x=\"210\" y=\"40\" width=\"92\" height=\"50\" fill=\"#fff\"/>",
+    "bg": [
+      "#1e8449",
+      "#145a32"
+    ]
+  },
+  "volley-spike": {
+    "inner": "<rect x=\"0\" y=\"340\" width=\"512\" height=\"172\" fill=\"#edbb99\"/>\n     <rect x=\"248\" y=\"120\" width=\"16\" height=\"280\" fill=\"#fff\"/>\n     <path d=\"M180 200 h152 v160 h-152z\" fill=\"none\" stroke=\"#fff\" stroke-width=\"8\"/>\n     <circle cx=\"160\" cy=\"180\" r=\"32\" fill=\"#f4d03f\"/>\n     <circle cx=\"360\" cy=\"300\" r=\"24\" fill=\"#2980b9\"/>\n     <circle cx=\"140\" cy=\"310\" r=\"24\" fill=\"#e74c3c\"/>",
+    "bg": [
+      "#f5cba7",
+      "#e67e22"
+    ]
+  },
+  "hand-goal": {
+    "inner": "<rect x=\"70\" y=\"70\" width=\"372\" height=\"240\" fill=\"none\" stroke=\"#f5cba7\" stroke-width=\"14\"/>\n     <rect x=\"160\" y=\"70\" width=\"192\" height=\"90\" fill=\"none\" stroke=\"#f5cba7\" stroke-width=\"10\"/>\n     <circle cx=\"256\" cy=\"360\" r=\"34\" fill=\"#e67e22\"/>\n     <circle cx=\"256\" cy=\"430\" r=\"22\" fill=\"#f5cba7\"/>\n     <rect x=\"232\" y=\"448\" width=\"48\" height=\"40\" fill=\"#f39c12\"/>",
+    "bg": [
+      "#2471a3",
+      "#1a5276"
+    ]
+  },
+  "sipa-kick": {
+    "inner": "<rect x=\"248\" y=\"100\" width=\"16\" height=\"300\" fill=\"#f4d03f\"/>\n     <path d=\"M190 160 h132 v180 h-132z\" fill=\"none\" stroke=\"#f4d03f\" stroke-width=\"8\"/>\n     <circle cx=\"170\" cy=\"220\" r=\"26\" fill=\"#c9a227\"/>\n     <path d=\"M158 220 l12 -8 12 8 -12 8z\" fill=\"#7d6608\"/>\n     <circle cx=\"360\" cy=\"340\" r=\"22\" fill=\"#e74c3c\"/>\n     <circle cx=\"140\" cy=\"360\" r=\"22\" fill=\"#16a085\"/>",
+    "bg": [
+      "#1abc9c",
+      "#0e6655"
+    ]
   }
 };

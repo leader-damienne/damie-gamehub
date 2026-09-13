@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef } from "react";
+import { rgba, themeFor } from "@/lib/game-theme";
 import GameCanvas from "./GameCanvas";
 import {
   drawBomb,
@@ -19,6 +20,7 @@ type RunProps = {
 };
 
 export function MotoRush({ onScore, onOver }: RunProps) {
+  const T = themeFor("moto-rush");
   const state = useRef({
     lane: 1,
     items: [] as { lane: number; y: number; gold: boolean }[],
@@ -58,19 +60,20 @@ export function MotoRush({ onScore, onOver }: RunProps) {
           }
           return it.y < 1.08;
         });
-        paintRoad(ctx, w, h, s.scroll);
+        paintRoad(ctx, w, h, s.scroll, 3, T);
         for (const it of s.items) {
           const x = 24 + ((it.lane + 0.5) * (w - 48)) / 3;
-          if (it.gold) drawCoin(ctx, x, it.y * h, 12);
-          else drawCar(ctx, x, it.y * h, 0.85, "#3a3a3a");
+          if (it.gold) drawCoin(ctx, x, it.y * h, 12, T.collect);
+          else drawCar(ctx, x, it.y * h, 0.85, T.hazard);
         }
-        drawMoto(ctx, 24 + ((s.lane + 0.5) * (w - 48)) / 3, h * 0.84, 1.05);
+        drawMoto(ctx, 24 + ((s.lane + 0.5) * (w - 48)) / 3, h * 0.84, 1.05, T.player);
       }}
     />
   );
 }
 
 export function WheelieGold({ onScore, onOver }: RunProps) {
+  const T = themeFor("wheelie-gold");
   const state = useRef({
     hold: false,
     angle: 0,
@@ -121,20 +124,20 @@ export function WheelieGold({ onScore, onOver }: RunProps) {
           }
           return c.x > -0.1;
         });
-        paintBoard(ctx, w, h);
-        ctx.fillStyle = "#2a2416";
+        paintBoard(ctx, w, h, T);
+        ctx.fillStyle = T.lane;
         ctx.fillRect(0, h * 0.78, w, h * 0.22);
-        ctx.fillStyle = "#d4af37";
+        ctx.fillStyle = T.accent;
         ctx.fillRect(0, h * 0.78, w, 6);
         for (const hole of s.holes) {
-          ctx.fillStyle = "#070705";
+          ctx.fillStyle = T.hazard;
           ctx.fillRect(hole.x * w, h * 0.78, hole.w * w, h * 0.22);
         }
-        for (const c of s.coins) drawCoin(ctx, c.x * w, c.y * h, 11);
+        for (const c of s.coins) drawCoin(ctx, c.x * w, c.y * h, 11, T.collect);
         ctx.save();
         ctx.translate(px * w, h * 0.74);
         ctx.rotate(-s.angle * 0.7);
-        drawMoto(ctx, 0, 0, 1.1);
+        drawMoto(ctx, 0, 0, 1.1, T.player);
         ctx.restore();
       }}
     />
@@ -142,6 +145,7 @@ export function WheelieGold({ onScore, onOver }: RunProps) {
 }
 
 export function GoldRally({ onScore, onOver }: RunProps) {
+  const T = themeFor("gold-rally");
   const state = useRef({
     x: 0.5,
     cars: [] as { x: number; y: number; gold: boolean }[],
@@ -186,18 +190,19 @@ export function GoldRally({ onScore, onOver }: RunProps) {
           }
           return c.y < 1.1;
         });
-        paintRoad(ctx, w, h, s.scroll);
+        paintRoad(ctx, w, h, s.scroll, 3, T);
         for (const c of s.cars) {
-          if (c.gold) drawCoin(ctx, c.x * w, c.y * h, 12);
-          else drawCar(ctx, c.x * w, c.y * h, 1, "#444");
+          if (c.gold) drawCoin(ctx, c.x * w, c.y * h, 12, T.collect);
+          else drawCar(ctx, c.x * w, c.y * h, 1, T.hazard);
         }
-        drawCar(ctx, s.x * w, h * 0.82, 1.15);
+        drawCar(ctx, s.x * w, h * 0.82, 1.15, T.player);
       }}
     />
   );
 }
 
 export function NitroCrown({ onScore, onOver }: RunProps) {
+  const T = themeFor("nitro-crown");
   const state = useRef({
     y: 0.72,
     v: 0,
@@ -238,22 +243,23 @@ export function NitroCrown({ onScore, onOver }: RunProps) {
             r.x = -1;
           }
         }
-        paintBoard(ctx, w, h);
-        ctx.fillStyle = "#2a2416";
+        paintBoard(ctx, w, h, T);
+        ctx.fillStyle = T.lane;
         ctx.fillRect(0, h * 0.78, w, h * 0.22);
-        ctx.fillStyle = "#d4af37";
+        ctx.fillStyle = T.accent2;
         ctx.fillRect(0, h * 0.78, w, 5);
         for (const r of s.ramps) {
-          ctx.fillStyle = "#070705";
+          ctx.fillStyle = T.hazard;
           ctx.fillRect(r.x * w, h * 0.78, r.gap * w, h * 0.22);
         }
-        drawCar(ctx, 0.26 * w, s.y * h, 1.2);
+        drawCar(ctx, 0.26 * w, s.y * h, 1.2, T.player);
       }}
     />
   );
 }
 
 export function RingFighter({ onScore, onOver }: RunProps) {
+  const T = themeFor("ring-fighter");
   const state = useRef({
     phase: "idle" as "idle" | "windup" | "strike",
     t: 0.8,
@@ -312,26 +318,30 @@ export function RingFighter({ onScore, onOver }: RunProps) {
           s.phase = "idle";
           s.t = Math.max(0.45, 0.9 - s.score / 4000);
         }
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         ctx.fillStyle =
-          s.phase === "windup" ? "rgba(211,106,106,0.25)" : s.phase === "strike" ? "rgba(211,106,106,0.45)" : "transparent";
+          s.phase === "windup" ? "rgba(192,57,43,0.25)" : s.phase === "strike" ? "rgba(192,57,43,0.45)" : "transparent";
         ctx.fillRect(0, 0, w, h);
-        ctx.fillStyle = "#d4af37";
-        ctx.font = "16px sans-serif";
-        ctx.fillText(`Vous ${s.hp}  ·  Adversaire ${s.enemy}`, 24, 48);
-        ctx.fillStyle = "#8a6a1a";
+        ctx.strokeStyle = T.accent;
+        ctx.lineWidth = 8;
+        ctx.beginPath();
+        ctx.ellipse(w / 2, h * 0.52, w * 0.38, h * 0.28, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = T.accent2;
         ctx.beginPath();
         ctx.arc(w / 2, h * 0.32, 36, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#d4af37";
+        ctx.fillStyle = T.player;
         ctx.beginPath();
         ctx.arc(w / 2, h * 0.7, 40, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#f5e6a3";
+        ctx.fillStyle = "#fff";
+        ctx.font = "16px sans-serif";
+        ctx.fillText(`Vous ${s.hp}  ·  Adversaire ${s.enemy}`, 24, 48);
         ctx.font = "14px sans-serif";
         ctx.fillText("Bloquer", 28, h - 28);
         ctx.fillText("Frapper", w - 90, h - 28);
-        ctx.strokeStyle = "rgba(212,175,55,0.4)";
+        ctx.strokeStyle = rgba(T.accent, 0.5);
         ctx.beginPath();
         ctx.moveTo(w / 2, h * 0.5);
         ctx.lineTo(w / 2, h - 16);
@@ -342,6 +352,7 @@ export function RingFighter({ onScore, onOver }: RunProps) {
 }
 
 export function TurretSiege({ onScore, onOver }: RunProps) {
+  const T = themeFor("turret-siege");
   const state = useRef({
     shots: [] as { x: number; y: number; vx: number; vy: number }[],
     foes: [] as { x: number; y: number }[],
@@ -387,16 +398,17 @@ export function TurretSiege({ onScore, onOver }: RunProps) {
           onOver(s.score);
         }
         s.foes = s.foes.filter((f) => f.y < 1.05);
-        paintBoard(ctx, w, h);
-        for (const f of s.foes) drawBomb(ctx, f.x * w, f.y * h, 14);
-        for (const b of s.shots) drawCoin(ctx, b.x * w, b.y * h, 5);
-        drawTank(ctx, w / 2, h * 0.88, -Math.PI / 2);
+        paintBoard(ctx, w, h, T);
+        for (const f of s.foes) drawBomb(ctx, f.x * w, f.y * h, 14, T.hazard);
+        for (const b of s.shots) drawCoin(ctx, b.x * w, b.y * h, 5, T.collect);
+        drawTank(ctx, w / 2, h * 0.88, -Math.PI / 2, T.player);
       }}
     />
   );
 }
 
 export function SkyAce({ onScore, onOver }: RunProps) {
+  const T = themeFor("sky-ace");
   const state = useRef({
     y: 0.5,
     flak: [] as { x: number; y: number; r: number }[],
@@ -440,24 +452,25 @@ export function SkyAce({ onScore, onOver }: RunProps) {
           onOver(s.score);
         }
         s.flak = s.flak.filter((f) => f.x > -0.15);
-        paintBoard(ctx, w, h, "#8ab4d4");
-        ctx.fillStyle = "rgba(80,120,160,0.18)";
+        paintBoard(ctx, w, h, T);
+        ctx.fillStyle = rgba(T.accent2, 0.22);
         ctx.fillRect(0, 0, w, h * 0.35);
         for (const f of s.flak) {
-          ctx.strokeStyle = "#d36a6a";
+          ctx.strokeStyle = T.hazard;
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(f.x * w, f.y * h, f.r * Math.min(w, h), 0, Math.PI * 2);
           ctx.stroke();
         }
-        for (const c of s.coins) drawCoin(ctx, c.x * w, c.y * h, 10);
-        drawPlane(ctx, 0.22 * w, s.y * h, 1.15);
+        for (const c of s.coins) drawCoin(ctx, c.x * w, c.y * h, 10, T.collect);
+        drawPlane(ctx, 0.22 * w, s.y * h, 1.15, T.player);
       }}
     />
   );
 }
 
 export function JetStrike({ onScore, onOver }: RunProps) {
+  const T = themeFor("jet-strike");
   const state = useRef({
     y: 0.5,
     shots: [] as { x: number; y: number }[],
@@ -505,25 +518,26 @@ export function JetStrike({ onScore, onOver }: RunProps) {
           onOver(s.score);
         }
         s.foes = s.foes.filter((f) => f.x > -0.1);
-        paintBoard(ctx, w, h, "#6a8aaa");
+        paintBoard(ctx, w, h, T);
         for (const b of s.shots) {
-          ctx.fillStyle = "#f5e6a3";
+          ctx.fillStyle = T.collect;
           ctx.fillRect(b.x * w, b.y * h - 2, 14, 4);
         }
         for (const f of s.foes) {
           ctx.save();
           ctx.translate(f.x * w, f.y * h);
           ctx.scale(-1, 1);
-          drawPlane(ctx, 0, 0, 0.85);
+          drawPlane(ctx, 0, 0, 0.85, T.hazard);
           ctx.restore();
         }
-        drawPlane(ctx, 0.2 * w, s.y * h, 1.1);
+        drawPlane(ctx, 0.2 * w, s.y * h, 1.1, T.player);
       }}
     />
   );
 }
 
 export function TankPush({ onScore, onOver }: RunProps) {
+  const T = themeFor("tank-push");
   const state = useRef({
     x: 0.5,
     shots: [] as { x: number; y: number }[],
@@ -571,23 +585,24 @@ export function TankPush({ onScore, onOver }: RunProps) {
           onOver(s.score);
         }
         s.rocks = s.rocks.filter((r) => r.y < 1.05);
-        paintBoard(ctx, w, h);
-        ctx.fillStyle = "#2a2416";
+        paintBoard(ctx, w, h, T);
+        ctx.fillStyle = T.lane;
         ctx.fillRect(0, h * 0.9, w, h * 0.1);
         for (const r of s.rocks) {
-          ctx.fillStyle = "#3a3a3a";
+          ctx.fillStyle = T.hazard;
           ctx.beginPath();
           ctx.arc(r.x * w, r.y * h, 14, 0, Math.PI * 2);
           ctx.fill();
         }
-        for (const b of s.shots) drawCoin(ctx, b.x * w, b.y * h, 5);
-        drawTank(ctx, s.x * w, h * 0.86, -Math.PI / 2);
+        for (const b of s.shots) drawCoin(ctx, b.x * w, b.y * h, 5, T.collect);
+        drawTank(ctx, s.x * w, h * 0.86, -Math.PI / 2, T.player);
       }}
     />
   );
 }
 
 export function HoverDash({ onScore, onOver }: RunProps) {
+  const T = themeFor("hover-dash");
   const state = useRef({
     lane: 1,
     items: [] as { lane: number; y: number; gold: boolean }[],
@@ -625,17 +640,17 @@ export function HoverDash({ onScore, onOver }: RunProps) {
           }
           return it.y < 1.08;
         });
-        paintBoard(ctx, w, h, "#6a8aaa");
+        paintBoard(ctx, w, h, T);
         for (let i = 0; i < 3; i += 1) {
-          ctx.fillStyle = i === s.lane ? "rgba(212,175,55,0.16)" : "rgba(255,255,255,0.04)";
+          ctx.fillStyle = i === s.lane ? rgba(T.accent, 0.28) : rgba(T.lane, 0.45);
           ctx.fillRect((i * w) / 3 + 10, 20, w / 3 - 20, h - 40);
         }
         for (const it of s.items) {
           const x = ((it.lane + 0.5) * w) / 3;
-          if (it.gold) drawCoin(ctx, x, it.y * h, 12);
-          else drawBomb(ctx, x, it.y * h, 14);
+          if (it.gold) drawCoin(ctx, x, it.y * h, 12, T.collect);
+          else drawBomb(ctx, x, it.y * h, 14, T.hazard);
         }
-        drawMoto(ctx, ((s.lane + 0.5) * w) / 3, h * 0.84, 0.95);
+        drawMoto(ctx, ((s.lane + 0.5) * w) / 3, h * 0.84, 0.95, T.player);
       }}
     />
   );

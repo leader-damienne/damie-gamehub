@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { rgba, themeFor } from "@/lib/game-theme";
 import GameCanvas from "./GameCanvas";
-import { paintBoard, drawBasket, drawBomb, drawCoin, drawCrown } from "./sprites";
+import { paintBoard, drawBasket, drawBomb, drawCoin } from "./sprites";
 
 type RunProps = {
   onScore: (score: number) => void;
@@ -10,6 +11,7 @@ type RunProps = {
 };
 
 export function LaneRush({ onScore, onOver }: RunProps) {
+  const T = themeFor("lane-rush");
   const state = useRef({
     lane: 1,
     items: [] as { lane: number; y: number; gold: boolean }[],
@@ -49,25 +51,26 @@ export function LaneRush({ onScore, onOver }: RunProps) {
           }
           return it.y < 1.08;
         });
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         for (let i = 0; i < 3; i++) {
-          ctx.fillStyle = i === s.lane ? "rgba(212,175,55,0.12)" : "rgba(255,255,255,0.03)";
+          ctx.fillStyle = i === s.lane ? rgba(T.player, 0.28) : rgba(T.lane, 0.55);
           ctx.fillRect((i * w) / 3 + 8, 16, w / 3 - 16, h - 32);
-          ctx.strokeStyle = "rgba(212,175,55,0.22)";
+          ctx.strokeStyle = rgba(T.accent, 0.35);
           ctx.strokeRect((i * w) / 3 + 8, 16, w / 3 - 16, h - 32);
         }
         for (const it of s.items) {
           const x = ((it.lane + 0.5) * w) / 3;
-          if (it.gold) drawCoin(ctx, x, it.y * h, 13);
-          else drawBomb(ctx, x, it.y * h, 15);
+          if (it.gold) drawCoin(ctx, x, it.y * h, 13, T.collect);
+          else drawBomb(ctx, x, it.y * h, 15, T.collect);
         }
-        drawBasket(ctx, ((s.lane + 0.5) * w) / 3, h * 0.88);
+        drawBasket(ctx, ((s.lane + 0.5) * w) / 3, h * 0.88, T.player);
       }}
     />
   );
 }
 
 export function TargetCrown({ onScore, onOver }: RunProps) {
+  const T = themeFor("target-crown");
   const state = useRef({
     targets: [] as { x: number; y: number; gold: boolean; life: number }[],
     score: 0,
@@ -121,10 +124,22 @@ export function TargetCrown({ onScore, onOver }: RunProps) {
           }
         }
         s.targets = s.targets.filter((t) => t.life > 0);
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         for (const t of s.targets) {
-          if (t.gold) drawCrown(ctx, t.x * w, t.y * h, 16);
-          else drawBomb(ctx, t.x * w, t.y * h, 16);
+          if (t.gold) {
+            ctx.fillStyle = T.accent;
+            ctx.beginPath();
+            ctx.arc(t.x * w, t.y * h, 22, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = T.accent2;
+            ctx.beginPath();
+            ctx.arc(t.x * w, t.y * h, 14, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.fillStyle = T.accent;
+            ctx.beginPath();
+            ctx.arc(t.x * w, t.y * h, 7, 0, Math.PI * 2);
+            ctx.fill();
+          } else drawBomb(ctx, t.x * w, t.y * h, 16, T.collect);
         }
       }}
     />
@@ -132,6 +147,7 @@ export function TargetCrown({ onScore, onOver }: RunProps) {
 }
 
 export function GoldSnake({ onScore, onOver }: RunProps) {
+  const T = themeFor("gold-snake");
   const state = useRef({
     body: [
       { x: 6, y: 8 },
@@ -189,12 +205,12 @@ export function GoldSnake({ onScore, onOver }: RunProps) {
             s.body.pop();
           }
         }
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         const cw = w / s.cols;
         const ch = h / s.rows;
-        drawCoin(ctx, s.food.x * cw + cw / 2, s.food.y * ch + ch / 2, Math.min(cw, ch) * 0.32);
+        drawCoin(ctx, s.food.x * cw + cw / 2, s.food.y * ch + ch / 2, Math.min(cw, ch) * 0.32, T.collect);
         s.body.forEach((p, i) => {
-          ctx.fillStyle = i === 0 ? "#f5e6a3" : "#c9a227";
+          ctx.fillStyle = i === 0 ? T.player : T.accent;
           ctx.fillRect(p.x * cw + 2, p.y * ch + 2, cw - 4, ch - 4);
         });
       }}
@@ -203,6 +219,7 @@ export function GoldSnake({ onScore, onOver }: RunProps) {
 }
 
 export function GapFlyer({ onScore, onOver }: RunProps) {
+  const T = themeFor("gap-flyer");
   const state = useRef({
     y: 0.45,
     v: 0,
@@ -244,29 +261,30 @@ export function GapFlyer({ onScore, onOver }: RunProps) {
           s.dead = true;
           onOver(s.score);
         }
-        paintBoard(ctx, w, h);
+        paintBoard(ctx, w, h, T);
         for (const p of s.pipes) {
-          ctx.fillStyle = "#8a6a1a";
+          ctx.fillStyle = T.hazard;
           ctx.fillRect(p.x * w, 0, 0.16 * w, (p.gap - 0.14) * h);
           ctx.fillRect(p.x * w, (p.gap + 0.14) * h, 0.16 * w, h);
-          ctx.fillStyle = "#d4af37";
+          ctx.fillStyle = T.accent2;
           ctx.fillRect(p.x * w, (p.gap - 0.14) * h - 10, 0.16 * w, 10);
           ctx.fillRect(p.x * w, (p.gap + 0.14) * h, 0.16 * w, 10);
         }
-        drawCoin(ctx, 0.28 * w, s.y * h, 14);
+        drawCoin(ctx, 0.28 * w, s.y * h, 14, T.player);
       }}
     />
   );
 }
 
 const COLORS = [
-  { id: "or", hex: "#d4af37" },
-  { id: "ivoire", hex: "#f5e6a3" },
-  { id: "bronze", hex: "#8a6a1a" },
-  { id: "noir", hex: "#3a3a3a" },
+  { id: "rouge", hex: "#e74c3c" },
+  { id: "bleu", hex: "#3498db" },
+  { id: "jaune", hex: "#f1c40f" },
+  { id: "vert", hex: "#2ecc71" },
 ];
 
 export function ColorRush({ onScore, onOver }: RunProps) {
+  const T = themeFor("color-rush");
   const [target, setTarget] = useState(0);
   const [time, setTime] = useState(1);
   const [hp, setHp] = useState(3);
@@ -324,7 +342,7 @@ export function ColorRush({ onScore, onOver }: RunProps) {
   return (
     <div style={{ padding: "90px 16px 24px", height: "100%", display: "grid", gap: 16, alignContent: "center" }}>
       <div style={{ textAlign: "center" }}>
-        <p style={{ margin: 0, opacity: 0.7, fontSize: 13 }}>Touchez la couleur</p>
+        <p style={{ margin: 0, opacity: 0.7, fontSize: 13, color: T.player }}>Touchez la couleur</p>
         <div
           style={{
             margin: "12px auto 0",
@@ -332,20 +350,20 @@ export function ColorRush({ onScore, onOver }: RunProps) {
             height: 72,
             borderRadius: "50%",
             background: COLORS[target].hex,
-            border: "3px solid #f5e6a3",
+            border: `3px solid ${T.player}`,
           }}
         />
-        <div style={{ height: 8, marginTop: 16, borderRadius: 8, background: "#1a160e", overflow: "hidden" }}>
-          <div style={{ width: `${time * 100}%`, height: "100%", background: "#d4af37" }} />
+        <div style={{ height: 8, marginTop: 16, borderRadius: 8, background: T.laneAlt, overflow: "hidden" }}>
+          <div style={{ width: `${time * 100}%`, height: "100%", background: T.accent }} />
         </div>
-        <small>{hp} vies</small>
+        <small style={{ color: T.player }}>{hp} vies</small>
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
         {COLORS.map((c, i) => (
           <button
             key={c.id}
             className="gold-btn"
-            style={{ background: c.hex, color: i === 3 ? "#f6f1e4" : "#161000", border: "none" }}
+            style={{ background: c.hex, color: "#fff", border: "none" }}
             onClick={() => pick(i)}
           >
             {c.id}
@@ -356,8 +374,14 @@ export function ColorRush({ onScore, onOver }: RunProps) {
   );
 }
 
+const SIMON = [
+  { label: "Rouge", hex: "#e74c3c" },
+  { label: "Jaune", hex: "#f1c40f" },
+  { label: "Vert", hex: "#2ecc71" },
+  { label: "Bleu", hex: "#3498db" },
+];
+
 export function SimonCrown({ onScore, onOver }: RunProps) {
-  const pads = ["Or", "Ivoire", "Bronze", "Nuit"];
   const [lit, setLit] = useState<number | null>(null);
   const [msg, setMsg] = useState("Regardez");
   const seq = useRef<number[]>([Math.floor(Math.random() * 4)]);
@@ -406,21 +430,23 @@ export function SimonCrown({ onScore, onOver }: RunProps) {
 
   return (
     <div style={{ padding: "90px 16px 24px", height: "100%", display: "grid", alignContent: "center", gap: 16 }}>
-      <p style={{ textAlign: "center", margin: 0 }}>{msg}</p>
+      <p style={{ textAlign: "center", margin: 0, color: "#ecf0f1" }}>{msg}</p>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, maxWidth: 280, margin: "0 auto" }}>
-        {pads.map((p, i) => (
+        {SIMON.map((p, i) => (
           <button
-            key={p}
+            key={p.label}
             className="gold-btn"
             style={{
               height: 88,
               fontSize: 16,
-              opacity: lit === i ? 1 : 0.45,
+              background: p.hex,
+              color: "#fff",
+              opacity: lit === i ? 1 : 0.42,
               transform: lit === i ? "scale(1.04)" : "none",
             }}
             onClick={() => press(i)}
           >
-            {p}
+            {p.label}
           </button>
         ))}
       </div>

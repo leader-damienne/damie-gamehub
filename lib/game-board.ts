@@ -27,6 +27,15 @@ const BY_ID: Record<string, GameBoardKind> = {
   "sky-ace": "orbit",
   "jet-strike": "slash",
   "hover-dash": "lanes",
+  "bike-dash": "lanes",
+  "moto-cross": "orbit",
+  "loop-ace": "orbit",
+  "knock-out": "tap",
+  "ball-keep": "tap",
+  "foot-strike": "lanes",
+  "volley-spike": "orbit",
+  "hand-goal": "lanes",
+  "sipa-kick": "orbit",
 };
 
 const BY_CATEGORY: Record<GameCategory, GameBoardKind[]> = {
@@ -38,6 +47,7 @@ const BY_CATEGORY: Record<GameCategory, GameBoardKind[]> = {
   racing: ["lanes", "orbit"],
   combat: ["slash", "tap"],
   flight: ["orbit", "slash"],
+  sport: ["lanes", "tap"],
 };
 
 export const BOARD_KINDS: GameBoardKind[] = [

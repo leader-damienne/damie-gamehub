@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { themeFor } from "@/lib/game-theme";
 
 type RunProps = {
   onScore: (score: number) => void;
@@ -8,8 +9,25 @@ type RunProps = {
 };
 
 const ICONS = ["♛", "◆", "●", "▲", "★", "■", "✦", "◈"];
+const CARD_COLORS = ["#2ecc71", "#f4d03f", "#5dade2", "#e74c3c", "#9b59b6", "#e67e22", "#1abc9c", "#e91e63"];
+
+const MERGE_TILE: Record<number, { bg: string; fg: string }> = {
+  0: { bg: "#cdc1b4", fg: "transparent" },
+  2: { bg: "#eee4da", fg: "#776e65" },
+  4: { bg: "#ede0c8", fg: "#776e65" },
+  8: { bg: "#f2b179", fg: "#fff" },
+  16: { bg: "#f59563", fg: "#fff" },
+  32: { bg: "#f67c5f", fg: "#fff" },
+  64: { bg: "#f65e3b", fg: "#fff" },
+  128: { bg: "#edcf72", fg: "#fff" },
+  256: { bg: "#edcc61", fg: "#fff" },
+  512: { bg: "#edc850", fg: "#fff" },
+  1024: { bg: "#edc53f", fg: "#fff" },
+  2048: { bg: "#edc22e", fg: "#fff" },
+};
 
 export function MemoryVault({ onScore, onOver }: RunProps) {
+  const T = themeFor("memory-vault");
   const deck = useMemo(() => {
     const pairs = [...ICONS, ...ICONS].sort(() => Math.random() - 0.5);
     return pairs.map((v, i) => ({ id: i, v, open: false, done: false }));
@@ -47,19 +65,28 @@ export function MemoryVault({ onScore, onOver }: RunProps) {
 
   return (
     <div className="memory" style={{ gridTemplateColumns: "repeat(4, 1fr)" }}>
-      {cards.map((c, i) => (
-        <button
-          key={c.id}
-          className="cell"
-          onClick={() => {
-            if (c.done || c.open || picked.length === 2) return;
-            setCards((all) => all.map((x, idx) => (idx === i ? { ...x, open: true } : x)));
-            setPicked((p) => [...p, i]);
-          }}
-        >
-          {c.open || c.done ? c.v : ""}
-        </button>
-      ))}
+      {cards.map((c, i) => {
+        const shown = c.open || c.done;
+        const color = CARD_COLORS[ICONS.indexOf(c.v) % CARD_COLORS.length];
+        return (
+          <button
+            key={c.id}
+            className="cell"
+            style={{
+              background: shown ? color : T.bg1,
+              color: "#fff",
+              border: `2px solid ${shown ? color : T.accent}`,
+            }}
+            onClick={() => {
+              if (c.done || c.open || picked.length === 2) return;
+              setCards((all) => all.map((x, idx) => (idx === i ? { ...x, open: true } : x)));
+              setPicked((p) => [...p, i]);
+            }}
+          >
+            {shown ? c.v : ""}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -87,7 +114,7 @@ export function GridMerge({ onScore, onOver }: RunProps) {
   return (
     <div
       className="merge"
-      style={{ gridTemplateColumns: "repeat(4, 1fr)" }}
+      style={{ gridTemplateColumns: "repeat(4, 1fr)", background: "#bbada0", borderRadius: 16 }}
       onPointerDown={(e) => (start.current = { x: e.clientX, y: e.clientY })}
       onPointerUp={(e) => {
         if (!start.current) return;
@@ -98,11 +125,14 @@ export function GridMerge({ onScore, onOver }: RunProps) {
         else play(dy > 0 ? "D" : "U");
       }}
     >
-      {grid.map((v, i) => (
-        <div key={i} className={`tile v${v}`}>
-          {v || ""}
-        </div>
-      ))}
+      {grid.map((v, i) => {
+        const tile = MERGE_TILE[v] || { bg: "#3c3a32", fg: "#fff" };
+        return (
+          <div key={i} className={`tile v${v}`} style={{ background: tile.bg, color: tile.fg }}>
+            {v || ""}
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -158,6 +188,7 @@ function canMove(grid: number[]) {
 }
 
 export function MazeCrown({ onScore, onOver }: RunProps) {
+  const T = themeFor("maze-crown");
   const W = 9;
   const H = 11;
   const [player, setPlayer] = useState({ x: 1, y: 1 });
@@ -245,8 +276,8 @@ export function MazeCrown({ onScore, onOver }: RunProps) {
             key={i}
             className="tile"
             style={{
-              background: wall ? "#1b1b1b" : me ? "#d4af37" : g ? "#5a5a5a" : "#101010",
-              color: coin ? "#f0d56a" : "#111",
+              background: wall ? T.accent : me ? T.player : g ? T.hazard : T.bg1,
+              color: coin ? T.collect : T.bg1,
             }}
           >
             {coin && !me ? "●" : ""}
@@ -257,7 +288,10 @@ export function MazeCrown({ onScore, onOver }: RunProps) {
   );
 }
 
+const PULSE = ["#ff2e63", "#08d9d6", "#f9ed69"];
+
 export function PulseTap({ onScore, onOver }: RunProps) {
+  const T = themeFor("pulse-tap");
   const [notes, setNotes] = useState<{ id: number; lane: number; y: number }[]>([]);
   const score = useRef(0);
   const misses = useRef(0);
@@ -307,7 +341,30 @@ export function PulseTap({ onScore, onOver }: RunProps) {
 
   return (
     <div style={{ padding: "90px 16px 24px", height: "100%" }}>
-      <div style={{ position: "relative", height: "70%", border: "1px solid rgba(212,175,55,0.2)", borderRadius: 16 }}>
+      <div
+        style={{
+          position: "relative",
+          height: "70%",
+          border: `1px solid ${T.accent2}`,
+          borderRadius: 16,
+          background: T.bg1,
+        }}
+      >
+        {[0, 1, 2].map((lane) => (
+          <div
+            key={lane}
+            style={{
+              position: "absolute",
+              left: `${10 + lane * 30}%`,
+              top: 8,
+              bottom: 8,
+              width: "24%",
+              borderRadius: 10,
+              background: T.lane,
+              opacity: 0.55,
+            }}
+          />
+        ))}
         {notes.map((n) => (
           <div
             key={n.id}
@@ -318,15 +375,24 @@ export function PulseTap({ onScore, onOver }: RunProps) {
               width: "24%",
               height: 18,
               borderRadius: 8,
-              background: "#d4af37",
+              background: PULSE[n.lane],
             }}
           />
         ))}
-        <div style={{ position: "absolute", left: 8, right: 8, bottom: "18%", height: 8, background: "rgba(240,213,106,0.35)" }} />
+        <div
+          style={{
+            position: "absolute",
+            left: 8,
+            right: 8,
+            bottom: "18%",
+            height: 8,
+            background: "rgba(255,255,255,0.85)",
+          }}
+        />
       </div>
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 8, marginTop: 16 }}>
         {[0, 1, 2].map((l) => (
-          <button key={l} className="gold-btn" onClick={() => hit(l)}>
+          <button key={l} className="gold-btn" style={{ background: PULSE[l], color: l === 2 ? "#1a1a2e" : "#fff" }} onClick={() => hit(l)}>
             {l + 1}
           </button>
         ))}
@@ -336,6 +402,7 @@ export function PulseTap({ onScore, onOver }: RunProps) {
 }
 
 export function KingTap({ onScore, onOver }: RunProps) {
+  const T = themeFor("king-tap");
   const [left, setLeft] = useState(15);
   const score = useRef(0);
   const combo = useRef(0);
@@ -361,6 +428,12 @@ export function KingTap({ onScore, onOver }: RunProps) {
     <div className="tap-king">
       <button
         className="big-tap"
+        style={{
+          borderColor: T.accent,
+          background: `radial-gradient(circle at 35% 30%, ${T.accent2}, ${T.player} 70%)`,
+          color: "#fff",
+          boxShadow: `0 0 40px ${T.player}66`,
+        }}
         onPointerDown={() => {
           combo.current += 1;
           score.current += 8 + Math.min(40, combo.current);

@@ -4,6 +4,7 @@ import { useCallback, useMemo, useState } from "react";
 import GameBrief from "@/components/GameBrief";
 import { gameById } from "@/lib/catalog";
 import { TOKEN, formatDgh, freePlayDgh, stakePayout } from "@/lib/economy";
+import { themeFor } from "@/lib/game-theme";
 import {
   CrownCatch,
   GoldSlash,
@@ -25,6 +26,17 @@ import {
   TurretSiege,
   WheelieGold,
 } from "./VehicleGames";
+import {
+  BallKeep,
+  BikeDash,
+  FootStrike,
+  HandGoal,
+  KnockOut,
+  LoopAce,
+  MotoCross,
+  SipaKick,
+  VolleySpike,
+} from "./SportGames";
 
 type Props = {
   gameId: string;
@@ -110,6 +122,24 @@ export default function GameScreen({
         return <JetStrike {...props} />;
       case "hover-dash":
         return <HoverDash {...props} />;
+      case "bike-dash":
+        return <BikeDash {...props} />;
+      case "moto-cross":
+        return <MotoCross {...props} />;
+      case "loop-ace":
+        return <LoopAce {...props} />;
+      case "knock-out":
+        return <KnockOut {...props} />;
+      case "ball-keep":
+        return <BallKeep {...props} />;
+      case "foot-strike":
+        return <FootStrike {...props} />;
+      case "volley-spike":
+        return <VolleySpike {...props} />;
+      case "hand-goal":
+        return <HandGoal {...props} />;
+      case "sipa-kick":
+        return <SipaKick {...props} />;
       default:
         return <KingTap {...props} />;
     }
@@ -118,9 +148,21 @@ export default function GameScreen({
   const finalScore = over === null ? 0 : boosted ? over * 2 : over;
   const reward =
     over === null ? 0 : stake > 0 ? stakePayout(finalScore, stake) : freePlayDgh(finalScore);
+  const theme = themeFor(gameId);
 
   return (
-    <div className="game-stage">
+    <div
+      className="game-stage"
+      style={{
+        background: `linear-gradient(180deg, ${theme.bg0}, ${theme.bg1})`,
+        ["--game-accent" as string]: theme.accent,
+        ["--game-accent-2" as string]: theme.accent2,
+        ["--game-player" as string]: theme.player,
+        ["--game-collect" as string]: theme.collect,
+        ["--game-hazard" as string]: theme.hazard,
+        ["--game-lane" as string]: theme.lane,
+      }}
+    >
       <div className="game-hud">
         <button className="ghost-btn" onClick={onExit}>
           Quitter
