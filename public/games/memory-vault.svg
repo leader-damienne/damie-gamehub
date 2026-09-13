@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-memory-vault" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#143d2c"/>
       <stop offset="1" stop-color="#1f6f4a"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-memory-vault)"/>
   <rect x="70" y="170" width="372" height="230" rx="18" fill="#8b5a2b"/>
      <rect x="86" y="186" width="340" height="198" rx="10" fill="#5c3516"/>
      <rect x="110" y="210" width="90" height="120" rx="10" fill="#2ecc71"/>

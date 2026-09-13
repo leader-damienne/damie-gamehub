@@ -1,11 +1,11 @@
-import { gameCover } from "@/lib/catalog";
+import GameCover from "@/components/GameCover";
 import { FREE_PLAY_MAX_DGH, MICRON, TOKEN, formatDgh } from "@/lib/economy";
 import type { GameDef } from "@/lib/types";
 
 export default function GameBrief({ game }: { game: GameDef }) {
   return (
     <>
-      <img className="cover-lg" src={gameCover(game.id)} alt={game.title} />
+      <GameCover id={game.id} className="cover-lg" />
       <h3>{game.title}</h3>
       <p className="brief-tag">{game.tagline}</p>
       <div className="brief">

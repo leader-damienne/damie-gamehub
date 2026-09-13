@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-orbit-dash" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#070b2a"/>
       <stop offset="1" stop-color="#15205b"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-orbit-dash)"/>
   <circle cx="256" cy="256" r="78" fill="#3dd6c6"/>
      <circle cx="230" cy="240" r="18" fill="#1a8f84"/>
      <ellipse cx="256" cy="256" rx="210" ry="70" fill="none" stroke="#ffd166" stroke-width="8" transform="rotate(-18 256 256)"/>

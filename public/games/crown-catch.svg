@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-crown-catch" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#7ec8ff"/>
       <stop offset="1" stop-color="#b8ecff"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-crown-catch)"/>
   <ellipse cx="256" cy="430" rx="150" ry="28" fill="#1e6b3a"/>
      <path d="M140 360 q116 90 232 0 v40 q-116 70 -232 0z" fill="#c4782a" stroke="#7a3e12" stroke-width="8"/>
      <path d="M160 360 q96 -70 192 0" fill="none" stroke="#7a3e12" stroke-width="8"/>

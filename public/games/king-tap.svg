@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-king-tap" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#fdebd0"/>
       <stop offset="1" stop-color="#f5b041"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-king-tap)"/>
   <circle cx="256" cy="270" r="150" fill="#f1c40f" stroke="#d35400" stroke-width="16"/>
      <circle cx="256" cy="270" r="92" fill="#e67e22"/>
      <path d="M220 90 h72 v70 h-72z" fill="#8e44ad"/>

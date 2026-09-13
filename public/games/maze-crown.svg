@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-maze-crown" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#0e2a44"/>
       <stop offset="1" stop-color="#1a5276"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-maze-crown)"/>
   <rect x="48" y="48" width="416" height="416" fill="#1b4f72"/>
      <path d="M80 80 h352 v352 h-352z" fill="none" stroke="#f4d03f" stroke-width="28"/>
      <path d="M160 80 v120 h120 v80 h-80 v120" fill="none" stroke="#f4d03f" stroke-width="28"/>

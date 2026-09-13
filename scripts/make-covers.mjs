@@ -6,17 +6,7 @@ const dir = join(dirname(fileURLToPath(import.meta.url)), "..", "public", "games
 mkdirSync(dir, { recursive: true });
 
 function svg(inner, bg) {
-  return `<?xml version="1.0" encoding="UTF-8"?>
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="${bg[0]}"/>
-      <stop offset="1" stop-color="${bg[1]}"/>
-    </linearGradient>
-  </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
-  ${inner}
-</svg>`;
+  return { inner, bg };
 }
 
 const covers = {
@@ -289,8 +279,23 @@ const covers = {
   ),
 };
 
-for (const [id, xml] of Object.entries(covers)) {
+for (const [id, art] of Object.entries(covers)) {
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky-${id}" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="${art.bg[0]}"/>
+      <stop offset="1" stop-color="${art.bg[1]}"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#sky-${id})"/>
+  ${art.inner}
+</svg>`;
   writeFileSync(join(dir, `${id}.svg`), xml);
 }
+
+const ts = `export const GAME_COVER_ART: Record<string, { inner: string; bg: [string, string] }> = ${JSON.stringify(covers, null, 2)};
+`;
+writeFileSync(join(dir, "..", "..", "lib", "game-cover-art.ts"), ts);
 
 console.log(`Wrote ${Object.keys(covers).length} covers`);

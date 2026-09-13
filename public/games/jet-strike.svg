@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-jet-strike" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#1b4f72"/>
       <stop offset="1" stop-color="#0e2a44"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-jet-strike)"/>
   <polygon points="256,80 300,220 256,200 212,220" fill="#1a5276"/>
      <polygon points="256,200 360,280 256,250 152,280" fill="#2471a3"/>
      <polygon points="200,300 240,360 180,400" fill="#e74c3c"/>

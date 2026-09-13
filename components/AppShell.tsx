@@ -1,7 +1,8 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById, gameCover } from "@/lib/catalog";
+import GameCover from "@/components/GameCover";
+import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { MAX_DEPOSIT, MIN_CONVERT, MIN_DEPOSIT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, parseDghInput, parsePiInput, piToDgh } from "@/lib/economy";
 import { api, bootPi, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi, piSandbox } from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
@@ -711,7 +712,7 @@ export default function AppShell() {
                     onClick={() => setStakePick(g.id)}
                   >
                     <div className="thumb">
-                      <img src={gameCover(g.id)} alt={g.title} />
+                      <GameCover id={g.id} />
                     </div>
                     <div className="card-body">
                       <b>{g.title}</b>
@@ -744,7 +745,7 @@ export default function AppShell() {
                   return (
                     <div key={t.id} className="shop-item">
                       <div className="tour-head">
-                        <img className="tour-cover" src={gameCover(t.gameId)} alt="" />
+                        <GameCover id={t.gameId} className="tour-cover" />
                         <div>
                           <h4>{t.title}</h4>
                           <p>

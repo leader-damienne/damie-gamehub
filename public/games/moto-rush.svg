@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-moto-rush" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#5dade2"/>
       <stop offset="1" stop-color="#aed6f1"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-moto-rush)"/>
   <rect x="0" y="300" width="512" height="212" fill="#5d6d7e"/>
      <rect x="0" y="360" width="512" height="18" fill="#f4d03f"/>
      <rect x="40" y="300" width="18" height="80" fill="#fff"/>

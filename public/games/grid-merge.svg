@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-grid-merge" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#faf8ef"/>
       <stop offset="1" stop-color="#eee4da"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-grid-merge)"/>
   <rect x="56" y="56" width="400" height="400" rx="24" fill="#bbada0"/>
      <rect x="76" y="76" width="84" height="84" rx="10" fill="#eee4da"/><text x="118" y="132" text-anchor="middle" font-size="36" font-family="Arial" fill="#776e65">2</text>
      <rect x="172" y="76" width="84" height="84" rx="10" fill="#f2b179"/><text x="214" y="132" text-anchor="middle" font-size="36" font-family="Arial" fill="#fff">8</text>

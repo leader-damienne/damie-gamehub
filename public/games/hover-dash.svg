@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-hover-dash" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#1a0033"/>
       <stop offset="1" stop-color="#4a0072"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-hover-dash)"/>
   <rect x="60" y="40" width="120" height="432" rx="16" fill="#7d3c98"/>
      <rect x="196" y="40" width="120" height="432" rx="16" fill="#6c3483"/>
      <rect x="332" y="40" width="120" height="432" rx="16" fill="#7d3c98"/>

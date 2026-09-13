@@ -1,12 +1,12 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+    <linearGradient id="sky-ring-fighter" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0" stop-color="#fad7a0"/>
       <stop offset="1" stop-color="#e67e22"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" fill="url(#sky)"/>
+  <rect width="512" height="512" fill="url(#sky-ring-fighter)"/>
   <rect x="40" y="300" width="432" height="28" fill="#922b21"/>
      <rect x="70" y="328" width="372" height="120" fill="#7b241c"/>
      <circle cx="180" cy="250" r="70" fill="#f5cba7"/>
