@@ -40,6 +40,11 @@ function withTimeout<T>(promise: Promise<T>, ms: number, message: string) {
 }
 
 let initPromise: Promise<void> | null = null;
+let initDone = false;
+
+export function isPiInited() {
+  return initDone && hasPiSdk();
+}
 
 export function initPi() {
   if (!hasPiSdk()) {
@@ -51,10 +56,15 @@ export function initPi() {
       window.Pi!.init({ version: "2.0", sandbox }),
       8000,
       `Pi.init bloqué (${sandbox ? "Testnet" : "Mainnet"}). L’URL de l’app dans Develop doit être exactement ${window.location.origin}.`,
-    ).catch((err) => {
-      initPromise = null;
-      throw err;
-    });
+    )
+      .then(() => {
+        initDone = true;
+      })
+      .catch((err) => {
+        initPromise = null;
+        initDone = false;
+        throw err;
+      });
   }
   return initPromise;
 }

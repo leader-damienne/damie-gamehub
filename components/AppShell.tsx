@@ -4,7 +4,18 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import GameCover from "@/components/GameCover";
 import { CATEGORIES, GAMES, SHOP, TOURNAMENTS, gameById } from "@/lib/catalog";
 import { MAX_DEPOSIT, MIN_CONVERT, MIN_DEPOSIT, MIN_SWAP_PI, MIN_WITHDRAW, STAKES, TOKEN, formatDgh, parseDghInput, parsePiInput, piToDgh } from "@/lib/economy";
-import { api, bootPi, clearPaymentsAuth, ensurePaymentsAuth, hasPiSdk, initPi, piSandbox } from "@/lib/pi-client";
+import {
+  api,
+  bootPi,
+  clearPaymentsAuth,
+  ensurePaymentsAuth,
+  hasPiSdk,
+  initPi,
+  isPiInited,
+  paymentsAuthActive,
+  piError,
+  piSandbox,
+} from "@/lib/pi-client";
 import { APP_NAME } from "@/lib/site";
 import type { Pioneer, View } from "@/lib/types";
 import GameScreen from "@/games/GameScreen";
@@ -141,7 +152,7 @@ export default function AppShell() {
   const wakePayments = useCallback(async () => {
     if (!hasPiSdk()) return false;
     try {
-      await bootPi();
+      if (!isPiInited()) await bootPi();
       await ensurePaymentsAuth(onPiIncomplete);
       setPayReady(true);
       return true;
@@ -242,76 +253,89 @@ export default function AppShell() {
   }, [view, boardGame, refreshBoard, refreshTours]);
 
   async function pay(productId: string, amount: number, memo: string) {
-    if (!session || !pioneer) return false;
+    if (!session || !pioneer) {
+      setError("Reconnectez-vous avec Pi, puis touchez Déposer.");
+      return false;
+    }
     if (!hasPiSdk()) {
-      setError("Les paiements Pi s’effectuent dans le Pi Browser.");
+      setError("Ouvrez ce lien dans le Pi Browser, pas Chrome.");
+      return false;
+    }
+    if (!isPiInited() || !paymentsAuthActive()) {
+      setError("Touchez d’abord « Activer les paiements Pi », puis Déposer à nouveau.");
+      void wakePayments();
       return false;
     }
     setBusy(true);
     setError("");
-    const createOnce = () =>
-      new Promise<void>((resolve, reject) => {
+    const origin = window.location.origin;
+    const paymentPromise = new Promise<void>((resolve, reject) => {
+      let settled = false;
+      const finish = (fn: () => void) => {
+        if (settled) return;
+        settled = true;
+        window.clearTimeout(timer);
+        fn();
+      };
+      const timer = window.setTimeout(() => {
+        finish(() =>
+          reject(
+            new Error(
+              `Pi n’a pas ouvert le paiement. Dans develop.pinet.com l’URL doit être exactement ${origin}. Touchez Déposer à nouveau.`,
+            ),
+          ),
+        );
+      }, 12000);
+      try {
         window.Pi!.createPayment(
           { amount, memo, metadata: { productId, uid: pioneer.uid } },
           {
-            onReadyForServerApproval: async (paymentId) => {
-              await api("/api/payments/approve", session, { paymentId, productId });
+            onReadyForServerApproval: (paymentId) => {
+              void api("/api/payments/approve", session, { paymentId, productId }).catch((err) => {
+                finish(() => reject(err instanceof Error ? err : new Error("Approbation Pi impossible")));
+              });
             },
-            onReadyForServerCompletion: async (paymentId, txid) => {
-              let lastErr: unknown;
-              for (let i = 0; i < 8; i += 1) {
-                try {
-                  const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
-                    "/api/payments/complete",
-                    session,
-                    { paymentId, txid },
-                  );
-                  if (res.pioneer) applyPioneer(res.pioneer);
-                  rememberReceipt(res.paymentId || paymentId, "deposit");
-                  resolve();
-                  return;
-                } catch (err) {
-                  lastErr = err;
-                  await new Promise((wait) => setTimeout(wait, 2000));
+            onReadyForServerCompletion: (paymentId, txid) => {
+              void (async () => {
+                let lastErr: unknown;
+                for (let i = 0; i < 8; i += 1) {
+                  try {
+                    const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
+                      "/api/payments/complete",
+                      session,
+                      { paymentId, txid },
+                    );
+                    if (res.pioneer) applyPioneer(res.pioneer);
+                    rememberReceipt(res.paymentId || paymentId, "deposit");
+                    finish(() => resolve());
+                    return;
+                  } catch (err) {
+                    lastErr = err;
+                    await new Promise((wait) => setTimeout(wait, 2000));
+                  }
                 }
-              }
-              reject(lastErr instanceof Error ? lastErr : new Error("Paiement incomplet"));
+                finish(() => reject(lastErr instanceof Error ? lastErr : new Error("Paiement incomplet")));
+              })();
             },
-            onCancel: () => reject(new Error("Paiement annulé")),
+            onCancel: () => finish(() => reject(new Error("Paiement annulé"))),
             onError: (err, payment) => {
               if (payment?.identifier) onPiIncomplete(payment);
-              reject(err instanceof Error ? err : new Error("Paiement Pi refusé"));
+              finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
             },
           },
         );
-      });
-    try {
-      await bootPi();
-      let lastError: unknown;
-      for (let attempt = 0; attempt < 3; attempt += 1) {
-        try {
-          if (attempt > 0) clearPaymentsAuth();
-          await ensurePaymentsAuth(onPiIncomplete);
-          setPayReady(true);
-          await createOnce();
-          return true;
-        } catch (err) {
-          lastError = err;
-          const raw = err instanceof Error ? err.message : String(err || "");
-          if (/annul/i.test(raw)) throw err;
-          if (/payments["']?\s*scope/i.test(raw) || /incomplete/i.test(raw) || /unauthor/i.test(raw)) {
-            clearPaymentsAuth();
-            continue;
-          }
-          throw err;
-        }
+      } catch (err) {
+        finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
       }
-      throw lastError instanceof Error ? lastError : new Error("Paiement impossible");
+    });
+    try {
+      await paymentPromise;
+      return true;
     } catch (err) {
       const raw = err instanceof Error ? err.message : "Paiement impossible";
       setError(
         /payments["']?\s*scope/i.test(raw)
-          ? "Touchez Autoriser dans Pi, puis Déposer à nouveau. Une fois validé, ça reste actif."
+          ? "Touchez Autoriser dans Pi, puis Déposer à nouveau."
           : raw,
       );
       return false;
@@ -823,9 +847,23 @@ export default function AppShell() {
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Déposer des {piLabel}</h4>
                 <p>
-                  Le montant est pris sur votre wallet Pi Mainnet. Minimum {MIN_DEPOSIT} {piLabel}.
-                  L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
+                  Minimum {MIN_DEPOSIT} {piLabel}. Une fenêtre Pi doit s’ouvrir : Autoriser, puis confirmer le
+                  paiement.
                 </p>
+                {error && view === "wallet" && <div className="warn">{error}</div>}
+                <div className="amount-row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
+                  {[0.1, 0.25, 0.5, 1].map((n) => (
+                    <button
+                      key={n}
+                      type="button"
+                      className="ghost-btn"
+                      disabled={busy}
+                      onClick={() => setDepositInput(String(n))}
+                    >
+                      {n}
+                    </button>
+                  ))}
+                </div>
                 <div className="amount-row">
                   <input
                     type="text"
@@ -839,7 +877,7 @@ export default function AppShell() {
                     }}
                   />
                   <button className="gold-btn" disabled={busy} onClick={() => void submitDeposit()}>
-                    Déposer
+                    {busy ? "Ouverture Pi…" : "Déposer"}
                   </button>
                 </div>
               </div>
