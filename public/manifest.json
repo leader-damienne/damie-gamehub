@@ -4,8 +4,8 @@
   "description": "Hub de jeux HTML5 pour Pioneers — tournois, classements et Pi.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#070707",
-  "theme_color": "#070707",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "icons": [
     {
       "src": "/logo.png",

@@ -1,18 +1,18 @@
 :root {
-  --bg: #070707;
-  --bg-2: #0d0d0d;
-  --elev: #141414;
-  --card: #181818;
-  --line: rgba(212, 175, 55, 0.22);
+  --bg: #ffffff;
+  --bg-2: #f7f6f2;
+  --elev: #f4f1ea;
+  --card: #ffffff;
+  --line: rgba(138, 106, 26, 0.28);
   --gold: #d4af37;
-  --gold-2: #f0d56a;
+  --gold-2: #c49a22;
   --gold-3: #8a6a1a;
-  --gold-dim: rgba(212, 175, 55, 0.12);
-  --text: #f6f1e4;
-  --muted: #9a917c;
-  --danger: #d36a6a;
-  --ok: #7dcc8a;
-  --shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+  --gold-dim: rgba(212, 175, 55, 0.16);
+  --text: #161410;
+  --muted: #6f6758;
+  --danger: #b42323;
+  --ok: #2f8a4b;
+  --shadow: 0 18px 40px rgba(24, 18, 4, 0.08);
   --nav: 72px;
   --radius: 18px;
 }
@@ -33,9 +33,7 @@ body {
 }
 
 body {
-  background:
-    radial-gradient(1200px 500px at 50% -120px, rgba(212, 175, 55, 0.16), transparent 55%),
-    linear-gradient(180deg, #0b0b0b, #070707 40%);
+  background: #ffffff;
 }
 
 button,
@@ -59,9 +57,7 @@ img {
   min-height: 100dvh;
   position: relative;
   overflow: auto;
-  background:
-    radial-gradient(700px 280px at 80% -40px, rgba(240, 213, 106, 0.08), transparent),
-    #080808;
+  background: #ffffff;
   box-shadow: var(--shadow);
 }
 
@@ -142,9 +138,7 @@ img {
   border-radius: 24px;
   overflow: hidden;
   padding: 18px;
-  background:
-    linear-gradient(135deg, rgba(212, 175, 55, 0.22), rgba(12, 12, 12, 0.9) 48%),
-    #111;
+  background: linear-gradient(180deg, #fff8e6, #ffffff);
   border: 1px solid var(--line);
   margin-bottom: 18px;
 }
@@ -212,7 +206,7 @@ img {
 
 .chip {
   border: 1px solid var(--line);
-  background: #101010;
+  background: #ffffff;
   color: var(--muted);
   border-radius: 999px;
   padding: 8px 14px;
@@ -251,8 +245,8 @@ img {
 }
 
 .card {
-  background: linear-gradient(180deg, #171717, #101010);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  background: #ffffff;
+  border: 1px solid var(--line);
   border-radius: var(--radius);
   overflow: hidden;
   text-align: left;
@@ -262,7 +256,7 @@ img {
 
 .thumb {
   aspect-ratio: 1;
-  background: #101010;
+  background: #f4f1ea;
   overflow: hidden;
 }
 
@@ -348,7 +342,7 @@ img {
   padding: 12px;
   border-radius: 14px;
   background: var(--elev);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
   font-size: 13px;
 }
 
@@ -383,9 +377,9 @@ img {
   flex: 1;
   min-width: 0;
   border-radius: 12px;
-  border: 1px solid rgba(212, 175, 55, 0.28);
-  background: #111;
-  color: #f5e6a3;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--text);
   padding: 12px;
   font-size: 16px;
   font-weight: 700;
@@ -414,7 +408,7 @@ img {
   height: var(--nav);
   display: grid;
   grid-template-columns: repeat(5, 1fr);
-  background: rgba(10, 10, 10, 0.92);
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(16px);
   border-top: 1px solid var(--line);
 }
@@ -519,7 +513,7 @@ img {
 
 .warn {
   background: rgba(211, 106, 106, 0.12);
-  color: #efb4b4;
+  color: #8a2f2f;
   border: 1px solid rgba(211, 106, 106, 0.28);
   padding: 10px 12px;
   border-radius: 12px;
@@ -535,7 +529,7 @@ img {
 .list-item,
 .shop-item {
   background: var(--card);
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--line);
   border-radius: 16px;
   padding: 14px;
 }
@@ -579,7 +573,7 @@ img {
   margin: 0 auto 10px;
   border-radius: 50%;
   border: 2px solid var(--gold);
-  background: #111;
+  background: #fff8e6;
   display: grid;
   place-items: center;
   overflow: hidden;
@@ -652,7 +646,7 @@ img {
 .panel {
   width: 100%;
   max-width: 340px;
-  background: #121212;
+  background: #ffffff;
   border: 1px solid var(--line);
   border-radius: 20px;
   padding: 20px;
