@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
-    code: "wallet-v4",
+    code: "wallet-v5",
     host,
     network: mainnet ? "mainnet" : "sandbox",
     paymentsReady: hasApiKey(req),
@@ -46,8 +46,8 @@ export async function GET(req: Request) {
           ? "Clé API Mainnet absente. Vérifiez le Deploy."
           : !walletSeed
             ? bundledSeed
-              ? "Graine vue dans PI_API_KEY_MAINNET mais pas encore lue. Rechargez après le deploy wallet-v4."
-              : "Dépôts OK. Retraits : Add PI_WALLET_SEED (graine S… App Wallet Mainnet), sans toucher PI_API_KEY_MAINNET. Si le nom disparaît : Rotate PI_API_KEY_MAINNET → collez cléAPI|graineS → Deploy."
+              ? "Graine vue dans PI_API_KEY_MAINNET mais pas encore lue. Rechargez après le deploy wallet-v5."
+              : "Dépôts OK. Retraits : la graine doit être dans PI-SEED (déjà créée) ou PI_API_KEY_MAINNET. Cliquez Deploy, sans toucher la clé API."
             : !ready
               ? persistHint()
               : mainnet

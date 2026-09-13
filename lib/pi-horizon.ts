@@ -6,7 +6,10 @@ const HORIZON = {
 };
 
 function envRaw(name: string) {
-  return String((process.env as Record<string, string | undefined>)[name] || "").trim();
+  const fromProcess = String((process.env as Record<string, string | undefined>)[name] || "").trim();
+  if (fromProcess) return fromProcess;
+  const g = globalThis as { env?: Record<string, string | undefined> };
+  return String(g.env?.[name] || "").trim();
 }
 
 function secretParts(value: string) {
@@ -42,9 +45,21 @@ function firstWalletSeed(...names: string[]) {
 
 export function walletSeedForHost(mainnet: boolean) {
   if (mainnet) {
-    return firstWalletSeed("PI_WALLET_SEED_MAINNET", "PI_WALLET_SEED", "PI_API_KEY_MAINNET");
+    return firstWalletSeed(
+      "PI-SEED",
+      "PI_SEED",
+      "PI_WALLET_SEED_MAINNET",
+      "PI_WALLET_SEED",
+      "PI_API_KEY_MAINNET",
+    );
   }
-  return firstWalletSeed("PI_WALLET_SEED_TESTNET", "PI_WALLET_SEED", "PI_API_KEY_MAINNET");
+  return firstWalletSeed(
+    "PI-SEED",
+    "PI_SEED",
+    "PI_WALLET_SEED_TESTNET",
+    "PI_WALLET_SEED",
+    "PI_API_KEY_MAINNET",
+  );
 }
 
 export function hasWalletSeed(mainnet: boolean) {
