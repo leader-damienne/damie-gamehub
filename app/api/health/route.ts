@@ -27,7 +27,7 @@ export async function GET(req: Request) {
   return NextResponse.json({
     app: APP_NAME,
     ok: true,
-    code: "wallet-v7",
+    code: "wallet-v8",
     host,
     network: mainnet ? "mainnet" : "sandbox",
     paymentsReady: hasApiKey(req),
@@ -43,11 +43,15 @@ export async function GET(req: Request) {
       : keyIsSeed
         ? "PI_API_KEY_MAINNET contient une graine de portefeuille (S…). Il faut la clé API et la graine : clé|S… (une seule variable) ou PI_WALLET_SEED à part."
         : !hasApiKey(req)
-          ? "Clé API Mainnet absente. Vérifiez le Deploy."
+          ? mainnet
+            ? "Clé API Mainnet absente. Vérifiez le Deploy."
+            : "Clé API Testnet refusée ou identique à la Mainnet. Add PI-TESTNET-KEY (API Key de l’app Testnet), type Variable, puis Deploy."
           : !walletSeed
             ? bundledSeed
               ? "Graine vue dans PI_API_KEY_MAINNET mais pas encore lue. Rechargez après le deploy wallet-v5."
-              : "Dépôts OK. Retraits Testnet : la graine doit être dans PI-SEED-TESTNET. Cliquez Deploy, sans toucher PI-SEED."
+              : mainnet
+                ? "Dépôts OK. Retraits : graine dans PI-SEED."
+                : "Dépôts Testnet : Add variable PI-TESTNET-KEY = API Key de l’app Testnet (pas la clé Mainnet, pas une graine)."
             : !ready
               ? persistHint()
               : mainnet

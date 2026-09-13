@@ -37,7 +37,10 @@ export function isMainnetHost(host: string) {
 }
 
 function envRaw(name: string) {
-  return String((process.env as Record<string, string | undefined>)[name] || "").trim();
+  const fromProcess = String((process.env as Record<string, string | undefined>)[name] || "").trim();
+  if (fromProcess) return fromProcess;
+  const g = globalThis as { env?: Record<string, string | undefined> };
+  return String(g.env?.[name] || "").trim();
 }
 
 function firstApiKey(...names: string[]) {
@@ -49,10 +52,15 @@ function firstApiKey(...names: string[]) {
 }
 
 export function piApiKeyForHost(host: string) {
+  const mainnetKey = extractApiKey(envRaw("PI_API_KEY_MAINNET"));
   if (isMainnetHost(host)) {
     return firstApiKey("PI_API_KEY_MAINNET", "PI_API_KEY");
   }
-  return firstApiKey("PI_API_KEY_TESTNET", "PI_API_KEY");
+  for (const name of ["PI-TESTNET-KEY", "PI_API_KEY_TESTNET", "PI_API_KEY"]) {
+    const value = extractApiKey(envRaw(name));
+    if (value && value !== mainnetKey) return value;
+  }
+  return "";
 }
 
 export function requirePiKey(host: string) {
