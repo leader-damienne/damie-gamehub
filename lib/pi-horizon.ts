@@ -53,7 +53,13 @@ export function walletSeedForHost(mainnet: boolean) {
       "PI_API_KEY_MAINNET",
     );
   }
-  return firstWalletSeed("PI-TESTNET", "PI-SEED-TEST", "PI_WALLET_SEED_TESTNET", "PI_WALLET_SEED");
+  return firstWalletSeed(
+    "PI-SEED-TESTNET",
+    "PI-TESTNET",
+    "PI-SEED-TEST",
+    "PI_WALLET_SEED_TESTNET",
+    "PI_WALLET_SEED",
+  );
 }
 
 export function hasWalletSeed(mainnet: boolean) {
