@@ -262,67 +262,65 @@ export default function AppShell() {
     setBusy(true);
     setError("");
     const origin = window.location.origin;
-    const paymentPromise = new Promise<void>((resolve, reject) => {
-      let settled = false;
-      const finish = (fn: () => void) => {
-        if (settled) return;
-        settled = true;
-        window.clearTimeout(timer);
-        fn();
-      };
-      const timer = window.setTimeout(() => {
-        finish(() =>
-          reject(
-            new Error(
-              `Pi n’a pas ouvert le paiement. L’URL de l’app Testnet dans develop.pinet.com doit être ${origin}.`,
-            ),
-          ),
-        );
-      }, 12000);
-      try {
-        window.Pi!.createPayment(
-          { amount, memo, metadata: { productId, uid: pioneer.uid } },
-          {
-            onReadyForServerApproval: (paymentId) => {
-              void api("/api/payments/approve", session, { paymentId, productId }).catch((err) => {
-                finish(() => reject(err instanceof Error ? err : new Error("Approbation Pi impossible")));
-              });
-            },
-            onReadyForServerCompletion: (paymentId, txid) => {
-              void (async () => {
-                let lastErr: unknown;
-                for (let i = 0; i < 8; i += 1) {
-                  try {
-                    const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
-                      "/api/payments/complete",
-                      session,
-                      { paymentId, txid },
-                    );
-                    if (res.pioneer) applyPioneer(res.pioneer);
-                    rememberReceipt(res.paymentId || paymentId, "deposit");
-                    finish(() => resolve());
-                    return;
-                  } catch (err) {
-                    lastErr = err;
-                    await new Promise((wait) => setTimeout(wait, 2000));
-                  }
-                }
-                finish(() => reject(lastErr instanceof Error ? lastErr : new Error("Paiement incomplet")));
-              })();
-            },
-            onCancel: () => finish(() => reject(new Error("Paiement annulé"))),
-            onError: (err, payment) => {
-              if (payment?.identifier) onPiIncomplete(payment);
-              finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
-            },
-          },
-        );
-      } catch (err) {
-        finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
-      }
-    });
     try {
-      await paymentPromise;
+      await bootPi();
+      await ensurePaymentsAuth(onPiIncomplete);
+      setPayReady(true);
+      await new Promise<void>((resolve, reject) => {
+        let settled = false;
+        const finish = (fn: () => void) => {
+          if (settled) return;
+          settled = true;
+          window.clearTimeout(timer);
+          fn();
+        };
+        const timer = window.setTimeout(() => {
+          finish(() =>
+            reject(new Error(`Pi n’a pas ouvert le paiement. L’URL Testnet dans develop.pinet.com doit être ${origin}.`)),
+          );
+        }, 20000);
+        try {
+          window.Pi!.createPayment(
+            { amount, memo, metadata: { productId, uid: pioneer.uid } },
+            {
+              onReadyForServerApproval: (paymentId) => {
+                void api("/api/payments/approve", session, { paymentId, productId }).catch((err) => {
+                  finish(() => reject(err instanceof Error ? err : new Error("Approbation Pi impossible")));
+                });
+              },
+              onReadyForServerCompletion: (paymentId, txid) => {
+                void (async () => {
+                  let lastErr: unknown;
+                  for (let i = 0; i < 8; i += 1) {
+                    try {
+                      const res = await api<{ pioneer?: Pioneer; paymentId?: string }>(
+                        "/api/payments/complete",
+                        session,
+                        { paymentId, txid },
+                      );
+                      if (res.pioneer) applyPioneer(res.pioneer);
+                      rememberReceipt(res.paymentId || paymentId, "deposit");
+                      finish(() => resolve());
+                      return;
+                    } catch (err) {
+                      lastErr = err;
+                      await new Promise((wait) => setTimeout(wait, 2000));
+                    }
+                  }
+                  finish(() => reject(lastErr instanceof Error ? lastErr : new Error("Paiement incomplet")));
+                })();
+              },
+              onCancel: () => finish(() => reject(new Error("Paiement annulé"))),
+              onError: (err, payment) => {
+                if (payment?.identifier) onPiIncomplete(payment);
+                finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
+              },
+            },
+          );
+        } catch (err) {
+          finish(() => reject(err instanceof Error ? err : new Error(piError(err))));
+        }
+      });
       return true;
     } catch (err) {
       setError(piError(err));
@@ -834,7 +832,7 @@ export default function AppShell() {
               </div>
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Déposer des {piLabel}</h4>
-                <p>Minimum {MIN_DEPOSIT} {piLabel}. Touchez Déposer : le paiement Pi s’ouvre tout de suite.</p>
+                <p>Minimum {MIN_DEPOSIT} {piLabel}. Un tap sur Déposer ouvre le paiement Pi.</p>
                 {error && view === "wallet" && <div className="warn">{error}</div>}
                 <div className="amount-row" style={{ flexWrap: "wrap", marginBottom: 8 }}>
                   {[0.1, 0.25, 0.5, 1].map((n) => (

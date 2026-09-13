@@ -80,15 +80,21 @@ export function bootPi() {
 }
 
 export function piError(err: unknown) {
+  if (typeof err === "string" && err.trim()) return err;
   if (err instanceof Error && err.message) return err.message;
-  if (typeof err === "string" && err) return err;
+  if (err && typeof err === "object") {
+    const o = err as { message?: unknown; error?: unknown; error_message?: unknown };
+    for (const value of [o.message, o.error, o.error_message]) {
+      if (typeof value === "string" && value.trim() && value !== "[object Object]") return value;
+    }
+  }
   try {
     const text = JSON.stringify(err);
-    if (text && text !== "{}") return text;
+    if (text && text !== "{}" && text !== "null") return text;
   } catch {
     /* ignore */
   }
-  return `Connexion Pi refusée. L’URL de l’app dans Develop doit être exactement ${typeof window !== "undefined" ? window.location.origin : ""}.`;
+  return `Paiement Pi refusé. L’URL de l’app dans Develop doit être exactement ${typeof window !== "undefined" ? window.location.origin : ""}.`;
 }
 
 /** Call from a click handler. Do not await anything before this. */
