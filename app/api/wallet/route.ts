@@ -71,7 +71,7 @@ export async function POST(req: Request) {
       return NextResponse.json(
         {
           error:
-            "Cloudflare n’ajoute pas de nouveau secret sur ce Worker. Cliquez le crayon de PI_API_KEY_MAINNET, collez la graine S… (56 caractères) du App Wallet Testnet, puis Deploy. Alimentez ce wallet avec des Test-π (wallet.pi → Testnet).",
+            "Ajoutez la graine S… du App Wallet Mainnet. Si Cloudflare n’accepte pas de nouveau nom, collez-la dans PI_WALLET_SEED ou PI_API_KEY_MAINNET (crayon, puis Deploy). PI_API_KEY_MAINNET doit rester la clé API Mainnet si les dépôts doivent marcher.",
         },
         { status: 503 },
       );

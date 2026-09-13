@@ -27,18 +27,36 @@ export function requestHost(req: Request) {
   return cleanHost(new URL(req.url).hostname);
 }
 
-/** false = Test-π partout (dépôts et retraits). true = vrais π sur damiegamehub.com. */
-export const USE_MAINNET = false;
+/** true = vrais π sur damiegamehub.com. workers.dev reste en Testnet. */
+export const USE_MAINNET = true;
 
 export function isMainnetHost(host: string) {
   return USE_MAINNET && host === "damiegamehub.com";
 }
 
+function envClean(name: string) {
+  return String((process.env as Record<string, string | undefined>)[name] || "")
+    .replace(/\s+/g, "")
+    .trim();
+}
+
+function looksLikeSeed(value: string) {
+  return value.startsWith("S") && value.length >= 50;
+}
+
+function firstApiKey(...names: string[]) {
+  for (const name of names) {
+    const value = envClean(name);
+    if (value && !looksLikeSeed(value)) return value;
+  }
+  return "";
+}
+
 export function piApiKeyForHost(host: string) {
   if (isMainnetHost(host)) {
-    return process.env.PI_API_KEY_MAINNET || process.env.PI_API_KEY || "";
+    return firstApiKey("PI_API_KEY_MAINNET", "PI_API_KEY");
   }
-  return process.env.PI_API_KEY_TESTNET || process.env.PI_API_KEY || "";
+  return firstApiKey("PI_API_KEY_TESTNET", "PI_API_KEY");
 }
 
 export function requirePiKey(host: string) {

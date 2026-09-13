@@ -823,8 +823,8 @@ export default function AppShell() {
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Déposer des {piLabel}</h4>
                 <p>
-                  Le montant est pris sur votre wallet Pi Testnet (pas des vrais π). Minimum {MIN_DEPOSIT}{" "}
-                  {piLabel}. L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
+                  Le montant est pris sur votre wallet Pi Mainnet. Minimum {MIN_DEPOSIT} {piLabel}.
+                  L’autorisation Pi reste active tant que Damie GameHub reste ouvert.
                 </p>
                 <div className="amount-row">
                   <input
@@ -908,7 +908,8 @@ export default function AppShell() {
               <div className="shop-item" style={{ marginBottom: 12 }}>
                 <h4>Retirer vers le wallet Pi</h4>
                 <p>
-                  Les mêmes Test-π déposés vous sont renvoyés. Minimum {MIN_WITHDRAW} {piLabel}.
+                  Les π déposés vous sont renvoyés sur le même wallet Mainnet. Minimum {MIN_WITHDRAW}{" "}
+                  {piLabel}.
                 </p>
                 <div className="amount-row">
                   <input
@@ -1072,7 +1073,7 @@ export default function AppShell() {
               <p>
                 Les {piLabel} déposés doivent être échangés en {TOKEN} pour jouer, miser ou acheter.
                 Pour retirer, les {TOKEN} sont reconvertis en {piLabel} (100 {TOKEN} = 1 {piLabel}), puis
-                renvoyés vers le wallet Pi Testnet. Pas de monnaie fiat, pas de vrais π.
+                renvoyés vers votre wallet Pi Mainnet. Pas de monnaie fiat.
               </p>
             </div>
           )}

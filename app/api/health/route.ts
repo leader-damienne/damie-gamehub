@@ -31,16 +31,16 @@ export async function GET(req: Request) {
     hasWalletSeed: walletSeed,
     persist: persistBackend(),
     persistReady: ready,
-    hint: !walletSeed
-      ? mainnet
-        ? "Retraits : ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings."
-        : "Onglet Deployments : Retry / Deploy la dernière version. Puis crayon PI_API_KEY_MAINNET, graine S…, bouton Deploy (pas seulement Save version)."
-      : !ready
-        ? persistHint()
-        : mainnet && !hasDedicatedMainnet
-          ? "Ajoutez PI_API_KEY_MAINNET dans Cloudflare (clé du projet Mainnet). PI_API_KEY seule est souvent celle du Testnet."
+    hint: mainnet && !hasDedicatedMainnet
+      ? "Dépôts Mainnet : crayon de PI_API_KEY_MAINNET, collez la clé API du projet Mainnet (pas une graine S…, pas la clé Testnet), puis Deploy."
+      : !walletSeed
+        ? mainnet
+          ? "Retraits : ajoutez PI_WALLET_SEED (graine S… du App Wallet Mainnet) dans Cloudflare Settings."
+          : "Onglet Deployments : Retry / Deploy la dernière version. Puis crayon PI_API_KEY_MAINNET, graine S…, bouton Deploy (pas seulement Save version)."
+        : !ready
+          ? persistHint()
           : mainnet
             ? "Mainnet prêt. Déposez un petit montant depuis https://damiegamehub.com"
-            : "Testnet : dépôts et retraits en Test-π uniquement.",
+            : "Testnet (workers.dev) : dépôts et retraits en Test-π uniquement.",
   });
 }
